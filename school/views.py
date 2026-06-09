@@ -392,6 +392,59 @@ def allocations(request):
 
 
 @login_required
+def tasks(request):
+    academic_year = 2026
+    term = 1
+
+    task_qs = AssessmentTask.objects.filter(
+        allocation__academic_year=academic_year,
+        allocation__term=term
+    ).select_related(
+        'allocation__classroom__stream__pathway',
+        'allocation__subject',
+        'allocation__teacher',
+        'evaluating_teacher'
+    ).annotate(
+        avg_pct=Coalesce(
+            Avg(
+                ExpressionWrapper(
+                    F('student_results__score_achieved') * 100.0 / F('max_points'),
+                    output_field=FloatField()
+                )
+            ),
+            0.0
+        ),
+        entry_count=Count('student_results', distinct=True)
+    ).order_by(
+        'allocation__classroom__stream__name',
+        '-date_administered',
+        'title'
+    )
+
+    recent_by_stream = {}
+    for task in task_qs:
+        stream = task.allocation.classroom.stream
+        entry = recent_by_stream.setdefault(stream.id, {
+            'stream': stream,
+            'tasks': []
+        })
+        if len(entry['tasks']) < 3:
+            entry['tasks'].append(task)
+
+    streams_with_recent_tasks = [
+        recent_by_stream[key]
+        for key in sorted(recent_by_stream, key=lambda k: recent_by_stream[k]['stream'].name)
+    ]
+
+    context = {
+        'academic_year': academic_year,
+        'term': term,
+        'streams_with_recent_tasks': streams_with_recent_tasks,
+    }
+    return render(request, 'school/tasks.html', context)
+
+
+@login_required
 def allocation_detail(request, allocation_id):
     allocation = ClassSubjectAllocation.objects.select_related(
         'classroom__stream__pathway',
