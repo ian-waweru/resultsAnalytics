@@ -1,360 +1,335 @@
-<style>
-:root {
-    --font-sans: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-    
-    /* Backgrounds */
-    --color-background-primary: #ffffff;
-    --color-background-secondary: #f8fafc; /* Subtle light gray/blue */
-    
-    /* Typography colors */
-    --color-text-primary: #0f172a;   /* Dark slate */
-    --color-text-secondary: #64748b; /* Cool gray muted text */
-    
-    /* Borders */
-    --color-border-secondary: #cbd5e1;
-    --color-border-tertiary: #e2e8f0;
-    
-    /* Component Rounding */
-    --border-radius-md: 8px;
-    --border-radius-lg: 12px;
-}
-*{box-sizing:border-box;margin:0;padding:0}
-body{font-family:var(--font-sans)}
-.dash{padding:1.5rem 0}
-.topbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:1.75rem;flex-wrap:wrap;gap:12px}
-.school-brand{display:flex;flex-direction:column;gap:2px}
-.school-name{font-size:18px;font-weight:500;color:var(--color-text-primary)}
-.school-sub{font-size:13px;color:var(--color-text-secondary)}
-.role-toggle{display:flex;border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-md);overflow:hidden}
-.role-btn{padding:7px 16px;font-size:13px;cursor:pointer;border:none;background:transparent;color:var(--color-text-secondary);transition:background .15s,color .15s}
-.role-btn.active{background:var(--color-background-secondary);color:var(--color-text-primary);font-weight:500}
-.greeting{font-size:14px;color:var(--color-text-secondary);margin-bottom:1.5rem}
-.greeting strong{color:var(--color-text-primary);font-weight:500}
-.metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:1.5rem}
-.metric{background:var(--color-background-secondary);border-radius:var(--border-radius-md);padding:.85rem 1rem}
-.metric-label{font-size:12px;color:var(--color-text-secondary);margin-bottom:6px;display:flex;align-items:center;gap:5px}
-.metric-value{font-size:22px;font-weight:500;color:var(--color-text-primary);letter-spacing:-0.5px}
-.metric-sub{font-size:11px;color:var(--color-text-secondary);margin-top:3px}
-.section{margin-bottom:1.5rem}
-.section-title{font-size:13px;font-weight:500;color:var(--color-text-secondary);text-transform:uppercase;letter-spacing:.06em;margin-bottom:.75rem}
-.two-col{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-.card{background:var(--color-background-primary);border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-lg);padding:1rem 1.125rem}
-.card-title{font-size:13px;font-weight:500;color:var(--color-text-primary);margin-bottom:.875rem}
-.legend{display:flex;gap:14px;margin-bottom:.75rem;flex-wrap:wrap}
-.legend-item{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--color-text-secondary)}
-.legend-dot{width:9px;height:9px;border-radius:2px;flex-shrink:0}
-.actions{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-.action-btn{display:flex;align-items:center;gap:10px;padding:.7rem .875rem;background:var(--color-background-primary);border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-md);cursor:pointer;text-align:left;transition:background .15s}
-.action-btn:hover{background:var(--color-background-secondary)}
-.action-icon{width:32px;height:32px;border-radius:var(--border-radius-md);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:16px}
-.action-text{display:flex;flex-direction:column;gap:1px}
-.action-label{font-size:13px;font-weight:500;color:var(--color-text-primary)}
-.action-desc{font-size:11px;color:var(--color-text-secondary)}
-.class-list{display:flex;flex-direction:column;gap:6px}
-.class-row{display:flex;align-items:center;justify-content:space-between;padding:.5rem .625rem;border-radius:var(--border-radius-md);background:var(--color-background-secondary)}
-.class-name{font-size:13px;font-weight:500;color:var(--color-text-primary)}
-.class-meta{font-size:11px;color:var(--color-text-secondary);margin-top:1px}
-.class-badge{font-size:11px;font-weight:500;padding:3px 8px;border-radius:var(--border-radius-md)}
-.badge-ee{background:#EAF3DE;color:#3B6D11}
-.badge-me{background:#E6F1FB;color:#185FA5}
-.badge-ae{background:#FAEEDA;color:#854F0B}
-.badge-be{background:#FCEBEB;color:#A32D2D}
-.alert-list{display:flex;flex-direction:column;gap:6px}
-.alert-row{display:flex;align-items:flex-start;gap:10px;padding:.6rem .75rem;border-radius:var(--border-radius-md);border-left:2px solid}
-.alert-warn{background:#FAEEDA;border-color:#EF9F27}
-.alert-info{background:#E6F1FB;border-color:#378ADD}
-.alert-text{font-size:12px;color:var(--color-text-primary);line-height:1.5}
-.alert-time{font-size:11px;color:var(--color-text-secondary);margin-top:2px}
-.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)}
-.full-card{grid-column:1/-1}
-</style>
+{% extends 'base.html' %}
 
-<h2 class="sr-only">CBC school analytics dashboard with role-based views for teachers and HODs</h2>
+{% block title %}CBC Analytics Dashboard{% endblock %}
 
-<div class="dash">
-  <div class="topbar">
-    <div class="school-brand">
-      <span class="school-name"><i class="ti ti-school" aria-hidden="true" style="font-size:18px;margin-right:6px"></i>Elimu Analytics</span>
-      <span class="school-sub">CBC Performance System · Term {{ term }}, {{ academic_year }}</span>
-    </div>
-    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
-      <div class="role-toggle" role="group" aria-label="Switch dashboard role">
-        <button class="role-btn active" onclick="setRole('teacher')" id="btn-teacher">Teacher view</button>
+{% block content %}
+<div class="space-y-8">
+  <section class="bg-white border border-slate-200 rounded-3xl shadow-sm p-6">
+    <div class="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+      <div class="space-y-2">
+        <p class="text-sm uppercase tracking-[0.24em] text-slate-500">CBC Performance Dashboard</p>
+        <h1 class="text-2xl md:text-3xl font-semibold text-slate-900">School analytics — Term {{ term }}, {{ academic_year }}</h1>
+      </div>
+
+      <div class="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+        <div class="inline-flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+          <div class="h-10 w-10 rounded-full bg-blue-600 text-white grid place-items-center font-semibold">{{ user_initials }}</div>
+          <div>
+            <p class="text-sm font-medium text-slate-900">{{ request.user.full_name }}</p>
+            <p class="text-xs text-slate-500">{{ request.user.email }}</p>
+          </div>
+        </div>
+
         {% if request.user.is_hod %}
-        <button class="role-btn" onclick="setRole('hod')" id="btn-hod">HOD view</button>
+        <div class="inline-flex rounded-full border border-slate-200 overflow-hidden bg-slate-50 shadow-sm" role="group" aria-label="Switch dashboard role">
+          <button id="btn-teacher" type="button" class="px-4 py-2 text-sm font-medium text-slate-700 bg-white hover:bg-slate-100 transition" onclick="setRole('teacher')">Teacher view</button>
+          <button id="btn-hod" type="button" class="px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100 transition" onclick="setRole('hod')">HOD view</button>
+        </div>
         {% endif %}
       </div>
-      <div style="width:32px;height:32px;border-radius:50%;background:#E6F1FB;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:500;color:#185FA5" title="{{ request.user.full_name }}">{{ user_initials }}</div>
     </div>
-  </div>
+  </section>
 
-  <div id="view-teacher">
-    <p class="greeting">Good morning, <strong>{{ request.user.full_name }}</strong> — you have {{ teacher_classes_count }} active allocation{{ teacher_classes_count|pluralize }} and {{ pending_entries_count }} pending result entr{{ pending_entries_count|pluralize:"y,ies" }} this term.</p>
-    <div class="metrics">
-      <div class="metric">
-        <div class="metric-label"><i class="ti ti-users" aria-hidden="true" style="font-size:14px"></i>My students</div>
-        <div class="metric-value">{{ teacher_students_count }}</div>
-        <div class="metric-sub">across {{ teacher_classes_count }} section{{ teacher_classes_count|pluralize }}</div>
-      </div>
-      <div class="metric">
-        <div class="metric-label"><i class="ti ti-clipboard-check" aria-hidden="true" style="font-size:14px"></i>Tasks entered</div>
-        <div class="metric-value">{{ tasks_entered_count }}</div>
-        <div class="metric-sub">of {{ total_expected_tasks }} expected</div>
-      </div>
-      <div class="metric">
-        <div class="metric-label"><i class="ti ti-chart-bar" aria-hidden="true" style="font-size:14px"></i>Class avg</div>
-        <div class="metric-value">{{ teacher_avg_pct }}%</div>
-        <div class="metric-sub">{{ teacher_avg_level }}</div>
-      </div>
-      <div class="metric">
-        <div class="metric-label"><i class="ti ti-alert-circle" aria-hidden="true" style="font-size:14px"></i>Below exp.</div>
-        <div class="metric-value">{{ teacher_be_count }}</div>
-        <div class="metric-sub">learner{{ teacher_be_count|pluralize }} flagged</div>
-      </div>
+  <section id="view-teacher" class="space-y-6">
+    <div class="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+      <p class="text-sm text-slate-500">Good morning, <span class="font-semibold text-slate-900">{{ request.user.full_name }}</span>. You have <span class="font-semibold text-slate-900">{{ teacher_classes_count }}</span> active allocation{{ teacher_classes_count|pluralize }} and <span class="font-semibold text-slate-900">{{ pending_entries_count }}</span> pending entr{{ pending_entries_count|pluralize:"y,ies" }} this term.</p>
     </div>
 
-    <div class="two-col">
-      <div class="card">
-        <div class="card-title">My classes</div>
-        <div class="class-list">
+    <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <article class="rounded-3xl border border-slate-200 bg-slate-50 p-5">
+        <p class="text-sm text-slate-500">My students</p>
+        <p class="mt-3 text-3xl font-semibold text-slate-900">{{ teacher_students_count }}</p>
+        <p class="mt-2 text-sm text-slate-500">Across {{ teacher_classes_count }} section{{ teacher_classes_count|pluralize }}</p>
+      </article>
+      <article class="rounded-3xl border border-slate-200 bg-slate-50 p-5">
+        <p class="text-sm text-slate-500">Tasks entered</p>
+        <p class="mt-3 text-3xl font-semibold text-slate-900">{{ tasks_entered_count }}</p>
+        <p class="mt-2 text-sm text-slate-500">Of {{ total_expected_tasks }} expected</p>
+      </article>
+      <article class="rounded-3xl border border-slate-200 bg-slate-50 p-5">
+        <p class="text-sm text-slate-500">Class average</p>
+        <p class="mt-3 text-3xl font-semibold text-slate-900">{{ teacher_avg_pct }}%</p>
+        <p class="mt-2 text-sm text-slate-500">{{ teacher_avg_level }}</p>
+      </article>
+      <article class="rounded-3xl border border-slate-200 bg-slate-50 p-5">
+        <p class="text-sm text-slate-500">Below expectations</p>
+        <p class="mt-3 text-3xl font-semibold text-slate-900">{{ teacher_be_count }}</p>
+        <p class="mt-2 text-sm text-slate-500">Learner{{ teacher_be_count|pluralize }} flagged</p>
+      </article>
+    </div>
+
+    <div class="grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
+      <div class="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+        <div class="flex items-center justify-between gap-4 mb-5">
+          <h2 class="text-lg font-semibold text-slate-900">My classes</h2>
+          <span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium uppercase tracking-[0.2em] text-slate-500">{{ classes_data|length }} classes</span>
+        </div>
+        <div class="space-y-3">
           {% for cls in classes_data %}
-          <div class="class-row">
+          <div class="rounded-3xl border border-slate-200 bg-slate-50 p-4 flex items-center justify-between gap-4">
             <div>
-                <div class="class-name">{{ cls.name }}</div>
-                <div class="class-meta">{{ cls.subject }} · {{ cls.student_count }} student{{ cls.student_count|pluralize }}</div>
+              <p class="font-medium text-slate-900">{{ cls.name }}</p>
+              <p class="mt-1 text-sm text-slate-500">{{ cls.subject }} · {{ cls.student_count }} student{{ cls.student_count|pluralize }}</p>
             </div>
-            <span class="class-badge {% if cls.avg_level == 'EE' %}badge-ee{% elif cls.avg_level == 'ME' %}badge-me{% elif cls.avg_level == 'AE' %}badge-ae{% else %}badge-be{% endif %}">
-                {{ cls.avg_level }} · {{ cls.avg_pct }}%
-            </span>
+            <span class="rounded-full px-3 py-1 text-sm font-semibold {% if cls.avg_level == 'EE' %}bg-emerald-100 text-emerald-700{% elif cls.avg_level == 'ME' %}bg-sky-100 text-sky-700{% elif cls.avg_level == 'AE' %}bg-amber-100 text-amber-800{% else %}bg-rose-100 text-rose-700{% endif %}">{{ cls.avg_level }} · {{ cls.avg_pct }}%</span>
           </div>
           {% empty %}
-          <div class="class-meta" style="padding: 1rem 0;">No active subject allocations located for this term.</div>
+          <p class="text-sm text-slate-500">No active subject allocations located for this term.</p>
           {% endfor %}
         </div>
       </div>
 
-      <div class="card">
-        <div class="card-title">Class performance split</div>
-        <div class="legend">
-          <span class="legend-item"><span class="legend-dot" style="background:#639922"></span>EE</span>
-          <span class="legend-item"><span class="legend-dot" style="background:#378ADD"></span>ME</span>
-          <span class="legend-item"><span class="legend-dot" style="background:#BA7517"></span>AE</span>
-          <span class="legend-item"><span class="legend-dot" style="background:#E24B4A"></span>BE</span>
+      <div class="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+        <div class="flex items-center justify-between gap-4 mb-5">
+          <h2 class="text-lg font-semibold text-slate-900">Class performance split</h2>
+          <div class="flex flex-wrap gap-2 text-sm text-slate-500">
+            <span class="inline-flex items-center gap-2"><span class="h-2.5 w-2.5 rounded-full bg-emerald-600"></span>EE</span>
+            <span class="inline-flex items-center gap-2"><span class="h-2.5 w-2.5 rounded-full bg-sky-600"></span>ME</span>
+            <span class="inline-flex items-center gap-2"><span class="h-2.5 w-2.5 rounded-full bg-amber-600"></span>AE</span>
+            <span class="inline-flex items-center gap-2"><span class="h-2.5 w-2.5 rounded-full bg-rose-600"></span>BE</span>
+          </div>
         </div>
-        <div style="position:relative;height:180px">
-            <canvas id="teacherChart" role="img" aria-label="Stacked bar chart showing classroom CBC evaluation split.">Performance breakdown by CBC level per class.</canvas>
+        <div class="h-[360px] rounded-3xl bg-slate-50 p-4">
+          <canvas id="teacherChart" role="img" aria-label="Class performance split chart"></canvas>
         </div>
       </div>
     </div>
 
-    <div class="section" style="margin-top:12px">
-      <div class="section-title">Quick actions</div>
-      <div class="actions">
-        <button class="action-btn" onclick="location.href='#'">
-          <div class="action-icon" style="background:#E6F1FB"><i class="ti ti-pencil" style="color:#185FA5;font-size:16px" aria-hidden="true"></i></div>
-          <div class="action-text"><span class="action-label">Enter results</span><span class="action-desc">Log scores for a task</span></div>
+    <div class="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+      <div class="flex items-center justify-between mb-5">
+        <h2 class="text-lg font-semibold text-slate-900">Quick actions</h2>
+      </div>
+      <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <button type="button" class="group rounded-3xl border border-slate-200 bg-slate-50 p-5 text-left transition hover:border-blue-300 hover:bg-blue-50">
+          <div class="inline-flex h-12 w-12 items-center justify-center rounded-3xl bg-sky-100 text-sky-700 mb-4"><i class="ti ti-pencil text-lg"></i></div>
+          <p class="font-semibold text-slate-900">Enter results</p>
+          <p class="mt-1 text-sm text-slate-500">Log scores for a task</p>
         </button>
-        <button class="action-btn" onclick="location.href='#'">
-          <div class="action-icon" style="background:#FCEBEB"><i class="ti ti-alert-triangle" style="color:#A32D2D;font-size:16px" aria-hidden="true"></i></div>
-          <div class="action-text"><span class="action-label">At-risk students</span><span class="action-desc">View BE-flagged learners</span></div>
+        <button type="button" class="group rounded-3xl border border-slate-200 bg-slate-50 p-5 text-left transition hover:border-rose-300 hover:bg-rose-50">
+          <div class="inline-flex h-12 w-12 items-center justify-center rounded-3xl bg-rose-100 text-rose-700 mb-4"><i class="ti ti-alert-triangle text-lg"></i></div>
+          <p class="font-semibold text-slate-900">At-risk students</p>
+          <p class="mt-1 text-sm text-slate-500">View BE-flagged learners</p>
         </button>
-        <button class="action-btn" onclick="location.href='#'">
-          <div class="action-icon" style="background:#EAF3DE"><i class="ti ti-file-description" style="color:#3B6D11;font-size:16px" aria-hidden="true"></i></div>
-          <div class="action-text"><span class="action-label">Generate report</span><span class="action-desc">Export class summary</span></div>
+        <button type="button" class="group rounded-3xl border border-slate-200 bg-slate-50 p-5 text-left transition hover:border-emerald-300 hover:bg-emerald-50">
+          <div class="inline-flex h-12 w-12 items-center justify-center rounded-3xl bg-emerald-100 text-emerald-700 mb-4"><i class="ti ti-file-description text-lg"></i></div>
+          <p class="font-semibold text-slate-900">Generate report</p>
+          <p class="mt-1 text-sm text-slate-500">Export class summary</p>
         </button>
-        <button class="action-btn" onclick="location.href='#'">
-          <div class="action-icon" style="background:#FAEEDA"><i class="ti ti-calendar" style="color:#854F0B;font-size:16px" aria-hidden="true"></i></div>
-          <div class="action-text"><span class="action-label">SBA schedule</span><span class="action-desc">View upcoming tasks</span></div>
+        <button type="button" class="group rounded-3xl border border-slate-200 bg-slate-50 p-5 text-left transition hover:border-amber-300 hover:bg-amber-50">
+          <div class="inline-flex h-12 w-12 items-center justify-center rounded-3xl bg-amber-100 text-amber-700 mb-4"><i class="ti ti-calendar text-lg"></i></div>
+          <p class="font-semibold text-slate-900">SBA schedule</p>
+          <p class="mt-1 text-sm text-slate-500">View upcoming tasks</p>
         </button>
       </div>
     </div>
-  </div>
+  </section>
 
   {% if request.user.is_hod %}
-  <div id="view-hod" style="display:none">
-    <p class="greeting">Good morning, <strong>{{ request.user.full_name }}</strong> — school-wide results for Term {{ term }}, {{ academic_year }} at a glance.</p>
-    <div class="metrics">
-      <div class="metric">
-        <div class="metric-label"><i class="ti ti-users" aria-hidden="true" style="font-size:14px"></i>Total students</div>
-        <div class="metric-value">{{ total_students }}</div>
-        <div class="metric-sub">{{ total_classrooms }} Active Room{{ total_classrooms|pluralize }}</div>
-      </div>
-      <div class="metric">
-        <div class="metric-label"><i class="ti ti-chalkboard" aria-hidden="true" style="font-size:14px"></i>Teachers</div>
-        <div class="metric-value">{{ total_teachers }}</div>
-        <div class="metric-sub">{{ total_hods }} HOD Admin{{ total_hods|pluralize }}</div>
-      </div>
-      <div class="metric">
-        <div class="metric-label"><i class="ti ti-chart-line" aria-hidden="true" style="font-size:14px"></i>School avg</div>
-        <div class="metric-value">{{ school_avg }}%</div>
-        <div class="metric-sub">Term {{ term }} performance</div>
-      </div>
-      <div class="metric">
-        <div class="metric-label"><i class="ti ti-alert-circle" aria-hidden="true" style="font-size:14px"></i>Below exp.</div>
-        <div class="metric-value">{{ school_be_students_count }}</div>
-        <div class="metric-sub">{{ be_cohort_percentage }}% of cohort</div>
-      </div>
+  <section id="view-hod" class="hidden space-y-6">
+    <div class="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+      <p class="text-sm text-slate-500">Good morning, <span class="font-semibold text-slate-900">{{ request.user.full_name }}</span>. Here are the school-wide results for Term {{ term }}, {{ academic_year }}.</p>
     </div>
 
-    <div class="two-col">
-      <div class="card">
-        <div class="card-title">Performance by department</div>
-        <div class="legend">
-          <span class="legend-item"><span class="legend-dot" style="background:#639922"></span>EE</span>
-          <span class="legend-item"><span class="legend-dot" style="background:#378ADD"></span>ME</span>
-          <span class="legend-item"><span class="legend-dot" style="background:#BA7517"></span>AE</span>
-          <span class="legend-item"><span class="legend-dot" style="background:#E24B4A"></span>BE</span>
+    <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <article class="rounded-3xl border border-slate-200 bg-slate-50 p-5">
+        <p class="text-sm text-slate-500">Total students</p>
+        <p class="mt-3 text-3xl font-semibold text-slate-900">{{ total_students }}</p>
+        <p class="mt-2 text-sm text-slate-500">{{ total_classrooms }} active room{{ total_classrooms|pluralize }}</p>
+      </article>
+      <article class="rounded-3xl border border-slate-200 bg-slate-50 p-5">
+        <p class="text-sm text-slate-500">Teachers</p>
+        <p class="mt-3 text-3xl font-semibold text-slate-900">{{ total_teachers }}</p>
+        <p class="mt-2 text-sm text-slate-500">{{ total_hods }} HOD admin{{ total_hods|pluralize }}</p>
+      </article>
+      <article class="rounded-3xl border border-slate-200 bg-slate-50 p-5">
+        <p class="text-sm text-slate-500">School average</p>
+        <p class="mt-3 text-3xl font-semibold text-slate-900">{{ school_avg }}%</p>
+        <p class="mt-2 text-sm text-slate-500">Term {{ term }} performance</p>
+      </article>
+      <article class="rounded-3xl border border-slate-200 bg-slate-50 p-5">
+        <p class="text-sm text-slate-500">Below expectations</p>
+        <p class="mt-3 text-3xl font-semibold text-slate-900">{{ school_be_students_count }}</p>
+        <p class="mt-2 text-sm text-slate-500">{{ be_cohort_percentage }}% of cohort</p>
+      </article>
+    </div>
+
+    <div class="grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
+      <div class="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+        <div class="flex items-center justify-between gap-4 mb-5">
+          <h2 class="text-lg font-semibold text-slate-900">Performance by department</h2>
+          <div class="flex flex-wrap gap-2 text-sm text-slate-500">
+            <span class="inline-flex items-center gap-2"><span class="h-2.5 w-2.5 rounded-full bg-emerald-600"></span>EE</span>
+            <span class="inline-flex items-center gap-2"><span class="h-2.5 w-2.5 rounded-full bg-sky-600"></span>ME</span>
+            <span class="inline-flex items-center gap-2"><span class="h-2.5 w-2.5 rounded-full bg-amber-600"></span>AE</span>
+            <span class="inline-flex items-center gap-2"><span class="h-2.5 w-2.5 rounded-full bg-rose-600"></span>BE</span>
+          </div>
         </div>
-        <div style="position:relative;height:200px">
-            <canvas id="hodChart" role="img" aria-label="Department split performance records chart.">Department performance breakdown by CBC level.</canvas>
+        <div class="h-[360px] rounded-3xl bg-slate-50 p-4">
+          <canvas id="hodChart" role="img" aria-label="Department performance split chart"></canvas>
         </div>
       </div>
 
-      <div class="card">
-        <div class="card-title">Alerts &amp; notices</div>
-        <div class="alert-list">
+      <div class="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+        <h2 class="text-lg font-semibold text-slate-900 mb-5">Alerts & notices</h2>
+        <div class="space-y-3">
           {% for alert in alerts %}
-          <div class="alert-row {% if alert.type == 'warn' %}alert-warn{% else %}alert-info{% endif %}">
-            <i class="ti {% if alert.type == 'warn' %}ti-alert-triangle{% else %}ti-info-circle{% endif %}" style="color:{% if alert.type == 'warn' %}#BA7517{% else %}#378ADD{% endif %};font-size:16px;flex-shrink:0;margin-top:1px" aria-hidden="true"></i>
-            <div>
-                <div class="alert-text">{{ alert.text }}</div>
-                <div class="alert-time">{{ alert.time }}</div>
+          <div class="rounded-3xl border-l-4 p-4 {% if alert.type == 'warn' %}border-amber-300 bg-amber-50 text-amber-900{% else %}border-sky-300 bg-sky-50 text-sky-900{% endif %}">
+            <div class="flex items-start gap-3">
+              <span class="mt-1 inline-flex h-9 w-9 items-center justify-center rounded-2xl bg-white text-lg {% if alert.type == 'warn' %}text-amber-700{% else %}text-sky-700{% endif %}">{% if alert.type == 'warn' %}!</span>{% else %}i{% endif %}</span>
+              <div>
+                <p class="font-medium">{{ alert.text }}</p>
+                <p class="mt-2 text-sm text-slate-500">{{ alert.time }}</p>
+              </div>
             </div>
           </div>
           {% endfor %}
         </div>
       </div>
+    </div>
 
-      <div class="card full-card">
-        <div class="card-title">Performance trend — school average by subject</div>
-        <div class="legend" id="hodTrendLegend"></div>
-        <div style="position:relative;height:200px">
-            <canvas id="hodTrend" role="img" aria-label="Linear subject growth metrics across terms.">Trend chart of subject performance across tasks.</canvas>
-        </div>
+    <div class="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+      <div class="flex items-center justify-between mb-5">
+        <h2 class="text-lg font-semibold text-slate-900">Performance trend — school average by subject</h2>
+        <div id="hodTrendLegend" class="flex flex-wrap gap-3 text-sm text-slate-500"></div>
+      </div>
+      <div class="h-[360px] rounded-3xl bg-slate-50 p-4">
+        <canvas id="hodTrend" role="img" aria-label="School subject trend chart"></canvas>
       </div>
     </div>
 
-    <div class="section" style="margin-top:12px">
-      <div class="section-title">Quick actions</div>
-      <div class="actions">
-        <button class="action-btn" onclick="location.href='#'">
-          <div class="action-icon" style="background:#FCEBEB"><i class="ti ti-user-x" style="color:#A32D2D;font-size:16px" aria-hidden="true"></i></div>
-          <div class="action-text"><span class="action-label">Pending entries</span><span class="action-desc">Chase missing results</span></div>
+    <div class="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+      <h2 class="text-lg font-semibold text-slate-900 mb-5">Quick actions</h2>
+      <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <button type="button" class="group rounded-3xl border border-slate-200 bg-slate-50 p-5 text-left transition hover:border-blue-300 hover:bg-blue-50">
+          <div class="inline-flex h-12 w-12 items-center justify-center rounded-3xl bg-rose-100 text-rose-700 mb-4"><i class="ti ti-user-x text-lg"></i></div>
+          <p class="font-semibold text-slate-900">Pending entries</p>
+          <p class="mt-1 text-sm text-slate-500">Chase missing results</p>
         </button>
-        <button class="action-btn" onclick="location.href='#'">
-          <div class="action-icon" style="background:#EAF3DE"><i class="ti ti-report" style="color:#3B6D11;font-size:16px" aria-hidden="true"></i></div>
-          <div class="action-text"><span class="action-label">School report</span><span class="action-desc">Export full term summary</span></div>
+        <button type="button" class="group rounded-3xl border border-slate-200 bg-slate-50 p-5 text-left transition hover:border-emerald-300 hover:bg-emerald-50">
+          <div class="inline-flex h-12 w-12 items-center justify-center rounded-3xl bg-emerald-100 text-emerald-700 mb-4"><i class="ti ti-report text-lg"></i></div>
+          <p class="font-semibold text-slate-900">School report</p>
+          <p class="mt-1 text-sm text-slate-500">Export full term summary</p>
         </button>
-        <button class="action-btn" onclick="location.href='#'">
-          <div class="action-icon" style="background:#FAEEDA"><i class="ti ti-user-exclamation" style="color:#854F0B;font-size:16px" aria-hidden="true"></i></div>
-          <div class="action-text"><span class="action-label">At-risk cohort</span><span class="action-desc">Review BE students school-wide</span></div>
+        <button type="button" class="group rounded-3xl border border-slate-200 bg-slate-50 p-5 text-left transition hover:border-amber-300 hover:bg-amber-50">
+          <div class="inline-flex h-12 w-12 items-center justify-center rounded-3xl bg-amber-100 text-amber-700 mb-4"><i class="ti ti-user-exclamation text-lg"></i></div>
+          <p class="font-semibold text-slate-900">At-risk cohort</p>
+          <p class="mt-1 text-sm text-slate-500">Review BE students school-wide</p>
         </button>
-        <button class="action-btn" onclick="location.href='#'">
-          <div class="action-icon" style="background:#E6F1FB"><i class="ti ti-chart-dots" style="color:#185FA5;font-size:16px" aria-hidden="true"></i></div>
-          <div class="action-text"><span class="action-label">Compare classes</span><span class="action-desc">Cross-classroom analysis</span></div>
+        <button type="button" class="group rounded-3xl border border-slate-200 bg-slate-50 p-5 text-left transition hover:border-sky-300 hover:bg-sky-50">
+          <div class="inline-flex h-12 w-12 items-center justify-center rounded-3xl bg-sky-100 text-sky-700 mb-4"><i class="ti ti-chart-dots text-lg"></i></div>
+          <p class="font-semibold text-slate-900">Compare classes</p>
+          <p class="mt-1 text-sm text-slate-500">Cross-class analysis</p>
         </button>
       </div>
     </div>
-  </div>
+  </section>
   {% endif %}
 </div>
+{% endblock %}
 
+{% block extra_js %}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <script>
-function setRole(role){
-  document.getElementById('view-teacher').style.display = role==='teacher'?'block':'none';
+function setRole(role) {
+  document.getElementById('view-teacher').classList.toggle('hidden', role !== 'teacher');
   const hodView = document.getElementById('view-hod');
-  if(hodView) hodView.style.display = role==='hod'?'block':'none';
-  document.getElementById('btn-teacher').classList.toggle('active', role==='teacher');
-  const hodBtn = document.getElementById('btn-hod');
-  if(hodBtn) hodBtn.classList.toggle('active', role==='hod');
+  if (hodView) hodView.classList.toggle('hidden', role !== 'hod');
+  document.getElementById('btn-teacher').classList.toggle('bg-white', role === 'teacher');
+  document.getElementById('btn-teacher').classList.toggle('text-slate-900', role === 'teacher');
+  document.getElementById('btn-hod')?.classList.toggle('bg-white', role === 'hod');
+  document.getElementById('btn-hod')?.classList.toggle('text-slate-900', role === 'hod');
 }
 
 const cbcColors = {
-  ee:{bg:'#639922',border:'#3B6D11'},
-  me:{bg:'#378ADD',border:'#185FA5'},
-  ae:{bg:'#BA7517',border:'#854F0B'},
-  be:{bg:'#E24B4A',border:'#A32D2D'},
+  ee: { bg: '#639922', border: '#3B6D11' },
+  me: { bg: '#378ADD', border: '#185FA5' },
+  ae: { bg: '#BA7517', border: '#854F0B' },
+  be: { bg: '#E24B4A', border: '#A32D2D' },
 };
 
 const baseOpts = {
-  responsive:true, maintainAspectRatio:false,
-  plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>' '+ctx.parsed.y+'%'}}},
-  scales:{
-    x:{grid:{display:false},ticks:{font:{size:11}}},
-    y:{display:false,stacked:true,max:100},
-  }
+  responsive: true,
+  maintainAspectRatio: false,
+  plugins: {
+    legend: { display: false },
+    tooltip: { callbacks: { label: ctx => ' ' + ctx.parsed.y + '%' } },
+  },
+  scales: {
+    x: { grid: { display: false }, ticks: { font: { size: 11 } } },
+    y: { display: false, stacked: true, max: 100 },
+  },
 };
 
-// Teacher Chart
-new Chart(document.getElementById('teacherChart'),{
-  type:'bar',
-  data:{
+new Chart(document.getElementById('teacherChart'), {
+  type: 'bar',
+  data: {
     labels: {{ teacher_chart_labels|safe }},
-    datasets:[
-      {label:'EE',data: {{ teacher_chart_ee|safe }},backgroundColor:cbcColors.ee.bg,borderRadius:2,stack:'s'},
-      {label:'ME',data: {{ teacher_chart_me|safe }},backgroundColor:cbcColors.me.bg,stack:'s'},
-      {label:'AE',data: {{ teacher_chart_ae|safe }},backgroundColor:cbcColors.ae.bg,stack:'s'},
-      {label:'BE',data: {{ teacher_chart_be|safe }},backgroundColor:cbcColors.be.bg,borderRadius:2,stack:'s'},
-    ]
+    datasets: [
+      { label: 'EE', data: {{ teacher_chart_ee|safe }}, backgroundColor: cbcColors.ee.bg, borderRadius: 6, stack: 's' },
+      { label: 'ME', data: {{ teacher_chart_me|safe }}, backgroundColor: cbcColors.me.bg, borderRadius: 6, stack: 's' },
+      { label: 'AE', data: {{ teacher_chart_ae|safe }}, backgroundColor: cbcColors.ae.bg, borderRadius: 6, stack: 's' },
+      { label: 'BE', data: {{ teacher_chart_be|safe }}, backgroundColor: cbcColors.be.bg, borderRadius: 6, stack: 's' },
+    ],
   },
-  options:{...baseOpts,scales:{...baseOpts.scales,x:{...baseOpts.scales.x,stacked:true}}}
+  options: { ...baseOpts, scales: { ...baseOpts.scales, x: { ...baseOpts.scales.x, stacked: true } } },
 });
 
 {% if request.user.is_hod %}
-// HOD Summary Chart
-new Chart(document.getElementById('hodChart'),{
-  type:'bar',
-  data:{
+new Chart(document.getElementById('hodChart'), {
+  type: 'bar',
+  data: {
     labels: {{ hod_chart_labels|safe }},
-    datasets:[
-      {label:'EE',data: {{ hod_chart_ee|safe }},backgroundColor:cbcColors.ee.bg,borderRadius:2,stack:'s'},
-      {label:'ME',data: {{ hod_chart_me|safe }},backgroundColor:cbcColors.me.bg,stack:'s'},
-      {label:'AE',data: {{ hod_chart_ae|safe }},backgroundColor:cbcColors.ae.bg,stack:'s'},
-      {label:'BE',data: {{ hod_chart_be|safe }},backgroundColor:cbcColors.be.bg,borderRadius:2,stack:'s'},
-    ]
+    datasets: [
+      { label: 'EE', data: {{ hod_chart_ee|safe }}, backgroundColor: cbcColors.ee.bg, borderRadius: 6, stack: 's' },
+      { label: 'ME', data: {{ hod_chart_me|safe }}, backgroundColor: cbcColors.me.bg, borderRadius: 6, stack: 's' },
+      { label: 'AE', data: {{ hod_chart_ae|safe }}, backgroundColor: cbcColors.ae.bg, borderRadius: 6, stack: 's' },
+      { label: 'BE', data: {{ hod_chart_be|safe }}, backgroundColor: cbcColors.be.bg, borderRadius: 6, stack: 's' },
+    ],
   },
-  options:{...baseOpts,scales:{...baseOpts.scales,x:{...baseOpts.scales.x,stacked:true}}}
+  options: { ...baseOpts, scales: { ...baseOpts.scales, x: { ...baseOpts.scales.x, stacked: true } } },
 });
 
-// HOD Line Graph Trends
 const trendSubjects = ['Mathematics','Sciences','Languages','Humanities','Technicals'];
-const trendColors   = ['#639922','#378ADD','#BA7517','#E24B4A','#185FA5'];
-const trendData     = {{ hod_trend_data|safe }};
+const trendColors = ['#639922','#378ADD','#BA7517','#E24B4A','#185FA5'];
+const trendData = {{ hod_trend_data|safe }};
 
 const legendEl = document.getElementById('hodTrendLegend');
-if(legendEl) {
-    trendSubjects.forEach((s,i)=>{
-      const span=document.createElement('span');
-      span.className='legend-item';
-      span.innerHTML=`<span class="legend-dot" style="background:${trendColors[i]}"></span>${s}`;
-      legendEl.appendChild(span);
-    });
+if (legendEl) {
+  trendSubjects.forEach((subject, index) => {
+    const badge = document.createElement('span');
+    badge.className = 'inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-500';
+    badge.innerHTML = `<span class="h-2.5 w-2.5 rounded-full" style="background:${trendColors[index]}"></span>${subject}`;
+    legendEl.appendChild(badge);
+  });
 }
 
-new Chart(document.getElementById('hodTrend'),{
-  type:'line',
-  data:{
+new Chart(document.getElementById('hodTrend'), {
+  type: 'line',
+  data: {
     labels: ['Mid-term SBA','Portfolio Task','End of Term Exam'],
-    datasets: trendSubjects.map((s,i)=>({
-      label:s,
-      data:trendData[i],
-      borderColor:trendColors[i],
-      backgroundColor:'transparent',
-      borderWidth:2,
-      pointRadius:4,
-      pointBackgroundColor:trendColors[i],
-      tension:0.3,
-    }))
+    datasets: trendSubjects.map((subject, index) => ({
+      label: subject,
+      data: trendData[index],
+      borderColor: trendColors[index],
+      backgroundColor: 'transparent',
+      borderWidth: 3,
+      pointRadius: 4,
+      pointBackgroundColor: trendColors[index],
+      tension: 0.35,
+    })),
   },
-  options:{
-    responsive:true,maintainAspectRatio:false,
-    plugins:{legend:{display:false}},
-    scales:{
-      x:{grid:{display:false},ticks:{font:{size:11}}},
-      y:{min:40,max:90,ticks:{callback:v=>v+'%',font:{size:11}},grid:{color:'rgba(128,128,128,.1)'}},
-    }
-  }
+  options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: { legend: { display: false } },
+    scales: {
+      x: { grid: { display: false }, ticks: { font: { size: 11 } } },
+      y: { min: 40, max: 90, ticks: { callback: v => v + '%', font: { size: 11 } }, grid: { color: 'rgba(148,163,184,0.15)' } },
+    },
+  },
 });
 {% endif %}
+
+setRole('teacher');
 </script>
+{% endblock %}
