@@ -31,7 +31,7 @@
                 {% if user.is_authenticated %}
                 <div class="hidden md:flex items-center space-x-8">
                     <a href="{% url 'dashboard' %}" class="text-gray-600 hover:text-blue-600 transition-colors font-medium">Dashboard</a>
-                    <a href="{% url 'admin:school_classsubjectallocation_changelist' %}" class="text-gray-600 hover:text-blue-600 transition-colors font-medium">Allocations</a>
+                    <a href="{% url 'allocations' %}" class="text-gray-600 hover:text-blue-600 transition-colors font-medium">Allocations</a>
                     <a href="{% url 'admin:school_assessmenttask_changelist' %}" class="text-gray-600 hover:text-blue-600 transition-colors font-medium">Tasks</a>
                     <a href="{% url 'top_students' %}" class="text-gray-600 hover:text-blue-600 transition-colors font-medium">Results</a>
                 </div>

@@ -353,6 +353,93 @@ def cbc_school_dashboard(request):
 
 
 @login_required
+def allocations(request):
+    academic_year = 2026
+    term = 1
+    q = request.GET.get('q', '').strip()
+
+    allocations_qs = ClassSubjectAllocation.objects.filter(
+        academic_year=academic_year,
+        term=term,
+    ).select_related(
+        'classroom__stream__pathway',
+        'subject',
+        'teacher'
+    )
+
+    if q:
+        allocations_qs = allocations_qs.filter(
+            Q(subject__name__icontains=q) |
+            Q(classroom__name__icontains=q) |
+            Q(classroom__stream__name__icontains=q) |
+            Q(teacher__full_name__icontains=q) |
+            Q(teacher__username__icontains=q)
+        )
+
+    allocations_qs = allocations_qs.order_by(
+        'classroom__stream__name',
+        'classroom__name',
+        'subject__name'
+    )
+
+    context = {
+        'academic_year': academic_year,
+        'term': term,
+        'allocations': allocations_qs,
+        'query': q,
+    }
+    return render(request, 'school/allocations.html', context)
+
+
+@login_required
+def allocation_detail(request, allocation_id):
+    allocation = ClassSubjectAllocation.objects.select_related(
+        'classroom__stream__pathway',
+        'subject',
+        'teacher'
+    ).prefetch_related(
+        'tasks__student_results'
+    ).filter(id=allocation_id).first()
+
+    if not allocation:
+        from django.shortcuts import get_object_or_404
+        allocation = get_object_or_404(
+            ClassSubjectAllocation.objects.select_related(
+                'classroom__stream__pathway',
+                'subject',
+                'teacher'
+            ),
+            id=allocation_id
+        )
+
+    task_stats = allocation.tasks.select_related('evaluating_teacher').annotate(
+        avg_pct=Coalesce(
+            Avg(
+                ExpressionWrapper(
+                    F('student_results__score_achieved') * 100.0 / F('max_points'),
+                    output_field=FloatField()
+                )
+            ),
+            0.0
+        ),
+        result_count=Count('student_results', distinct=True)
+    ).order_by('-date_administered', 'title')
+
+    task_list = list(task_stats)
+    overall_avg = round(
+        sum((task.avg_pct or 0.0) for task in task_list) / len(task_list),
+        1
+    ) if task_list else 0.0
+
+    context = {
+        'allocation': allocation,
+        'task_list': task_list,
+        'overall_avg': overall_avg,
+    }
+    return render(request, 'school/allocation_detail.html', context)
+
+
+@login_required
 def top_students(request):
     academic_year = 2026
     term = 1

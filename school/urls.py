@@ -9,6 +9,8 @@ urlpatterns = [
     
     # Dashboard
     path('dashboard/', views.cbc_school_dashboard, name='dashboard'),
+    path('allocations/', views.allocations, name='allocations'),
+    path('allocations/<int:allocation_id>/', views.allocation_detail, name='allocation_detail'),
     path('top-students/', views.top_students, name='top_students'),
     path('', views.cbc_school_dashboard, name='cbc_dashboard'),
 ]
