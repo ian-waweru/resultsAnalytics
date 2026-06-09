@@ -8,6 +8,7 @@ class TeacherManager(BaseUserManager):
 
     Handles user creation for `manage.py createsuperuser`, programmatic
     user creation, and provides domain-specific querysets for school workflows.
+    All methods are optimized with select_related/prefetch_related to prevent N+1 queries.
     """
 
     # ------------------------------------------------------------------
@@ -25,6 +26,10 @@ class TeacherManager(BaseUserManager):
         """Return all active teachers with HOD designation."""
         return self.get_queryset().filter(is_hod=True, is_active=True)
 
+    def hods_with_allocations(self):
+        """Return HODs with their class allocations pre-fetched."""
+        return self.hods().prefetch_related('allocations__classroom', 'allocations__subject')
+
     def tsc_teachers(self):
         """Return all TSC (government-employed) teachers."""
         return self.get_queryset().filter(
@@ -39,6 +44,17 @@ class TeacherManager(BaseUserManager):
         return self.get_queryset().filter(is_active=True).filter(
             models.Q(tsc_number__isnull=True) | models.Q(tsc_number="")
         )
+
+    def with_allocations(self):
+        """Return teachers with their allocations pre-fetched for efficient iteration."""
+        return self.get_queryset().prefetch_related(
+            'allocations__classroom__stream__pathway',
+            'allocations__subject'
+        )
+
+    def active(self):
+        """Return only active teachers (is_active=True)."""
+        return self.get_queryset().filter(is_active=True)
 
     # ------------------------------------------------------------------
     # User creation

@@ -112,6 +112,10 @@ class TeacherAdmin(UserAdmin):
     list_filter   = ("is_hod", "is_active", "is_staff")
     search_fields = ("full_name", "username", "tsc_number", "email")
     ordering      = ("full_name",)
+    
+    # Optimize list view queries
+    # Note: list_select_related is not directly available in UserAdmin, 
+    # but we optimize in get_queryset instead
 
     fieldsets = (
         ("Identity", {
@@ -148,7 +152,11 @@ class TeacherAdmin(UserAdmin):
 
     @admin.display(description="Allocations")
     def allocation_count(self, obj):
-        count = obj.allocations.count()
+        # Use cached annotation if available
+        if hasattr(obj, '_alloc_count'):
+            count = obj._alloc_count
+        else:
+            count = obj.allocations.count()
         url = (
             reverse("admin:school_classsubjectallocation_changelist")
             + f"?teacher__id__exact={obj.pk}"
@@ -156,8 +164,9 @@ class TeacherAdmin(UserAdmin):
         return format_html('<a href="{}">{} subject(s)</a>', url, count)
 
     def get_queryset(self, request):
+        # Annotate with allocation count to avoid N+1 queries in list view
         return super().get_queryset(request).annotate(
-            _alloc_count=Count("allocations")
+            _alloc_count=Count("allocations", distinct=True)
         )
 
 
@@ -173,18 +182,32 @@ class PathwayAdmin(admin.ModelAdmin):
 
     @admin.display(description="Streams")
     def stream_count(self, obj):
+        # Use cached annotation if available
+        if hasattr(obj, '_stream_count'):
+            return obj._stream_count
         return obj.streams.count()
 
     @admin.display(description="Subjects")
     def subject_count(self, obj):
+        # Use cached annotation if available
+        if hasattr(obj, '_subject_count'):
+            return obj._subject_count
         return obj.subjects.count()
 
     @admin.display(description="Students Enrolled")
     def student_count(self, obj):
+        if hasattr(obj, '_student_count'):
+            return obj._student_count
         return StudentSubjectSelection.objects.filter(pathway=obj).count()
 
     def get_queryset(self, request):
-        return super().get_queryset(request).prefetch_related("streams", "subjects")
+        return super().get_queryset(request).prefetch_related(
+            "streams", "subjects"
+        ).annotate(
+            _stream_count=Count("streams", distinct=True),
+            _subject_count=Count("subjects", distinct=True),
+            _student_count=Count("student_selections", distinct=True),
+        )
 
 
 # ===========================================================================
@@ -228,11 +251,16 @@ class ClassroomAdmin(admin.ModelAdmin):
 
     @admin.display(description="Pathway")
     def pathway_display(self, obj):
+        if hasattr(obj, '_pathway_code'):
+            return obj._pathway_code
         return obj.stream.pathway.get_code_display() if obj.stream.pathway else "—"
 
     @admin.display(description="Enrolled Students")
     def enrollment_count(self, obj):
-        count = obj.enrollments.filter(is_active=True).count()
+        if hasattr(obj, '_enrollment_count'):
+            count = obj._enrollment_count
+        else:
+            count = obj.enrollments.filter(is_active=True).count()
         url = (
             reverse("admin:school_studentenrollment_changelist")
             + f"?classroom__id__exact={obj.pk}&is_active__exact=1"
@@ -241,14 +269,17 @@ class ClassroomAdmin(admin.ModelAdmin):
 
     @admin.display(description="Subject Allocations")
     def allocation_count(self, obj):
+        if hasattr(obj, '_allocation_count'):
+            return obj._allocation_count
         return obj.subject_allocations.count()
 
     def get_queryset(self, request):
         return super().get_queryset(request).select_related(
             "stream__pathway"
         ).annotate(
-            _enrollment_count=Count("enrollments", filter=Q(enrollments__is_active=True)),
-            _allocation_count=Count("subject_allocations"),
+            _enrollment_count=Count("enrollments", filter=Q(enrollments__is_active=True), distinct=True),
+            _allocation_count=Count("subject_allocations", distinct=True),
+            _pathway_code=F("stream__pathway__code"),
         )
 
 
@@ -268,13 +299,21 @@ class StudentAdmin(admin.ModelAdmin):
 
     @admin.display(description="Current Classroom")
     def current_classroom_display(self, obj):
-        enrollment = obj.current_enrollment()
+        # Check if we have prefetched enrollments
+        if hasattr(obj, '_prefetched_objects_cache'):
+            enrollments = [e for e in obj.enrollments.all() if e.is_active]
+            enrollment = enrollments[-1] if enrollments else None
+        else:
+            enrollment = obj.current_enrollment()
+        
         if enrollment:
             return str(enrollment.classroom)
         return mark_safe('<span style="color:#999;">Not enrolled</span>')
 
     @admin.display(description="Pathway")
     def pathway_display(self, obj):
+        if hasattr(obj, '_pathway_code'):
+            return obj._pathway_code
         selection = obj.subject_selections.order_by("-academic_year").first()
         if selection:
             return selection.pathway.get_code_display()
@@ -282,7 +321,10 @@ class StudentAdmin(admin.ModelAdmin):
 
     @admin.display(description="Results")
     def result_count(self, obj):
-        count = obj.results.count()
+        if hasattr(obj, '_result_count'):
+            count = obj._result_count
+        else:
+            count = obj.results.count()
         url = (
             reverse("admin:school_learnerassessmentresult_changelist")
             + f"?student__id__exact={obj.pk}"
@@ -293,7 +335,10 @@ class StudentAdmin(admin.ModelAdmin):
         return super().get_queryset(request).prefetch_related(
             "enrollments__classroom__stream__pathway",
             "subject_selections__pathway",
-        ).annotate(_result_count=Count("results"))
+        ).annotate(
+            _result_count=Count("results", distinct=True),
+            _pathway_code=F("subject_selections__pathway__code"),
+        )
 
 
 # ===========================================================================
@@ -333,13 +378,11 @@ class SubjectAdmin(admin.ModelAdmin):
     @admin.display(description="Category")
     def category_badge(self, obj):
         if obj.category == "CORE":
-            return format_html(
-                '<span style="background:#cce5ff;color:#004085;padding:2px 8px;'
-                'border-radius:4px;font-size:0.8em;font-weight:600;">CORE</span>'
+            return mark_safe(
+                '<span style="background:#cce5ff;color:#004085;padding:2px 8px;border-radius:4px;font-size:0.8em;font-weight:600;">CORE</span>'
             )
-        return format_html(
-            '<span style="background:#e2e3e5;color:#383d41;padding:2px 8px;'
-            'border-radius:4px;font-size:0.8em;font-weight:600;">ELECTIVE</span>'
+        return mark_safe(
+            '<span style="background:#e2e3e5;color:#383d41;padding:2px 8px;border-radius:4px;font-size:0.8em;font-weight:600;">ELECTIVE</span>'
         )
 
     @admin.display(description="Learning Area")
@@ -387,7 +430,10 @@ class ClassSubjectAllocationAdmin(admin.ModelAdmin):
 
     @admin.display(description="Tasks")
     def task_count(self, obj):
-        count = obj.tasks.count()
+        if hasattr(obj, '_task_count'):
+            count = obj._task_count
+        else:
+            count = obj.tasks.count()
         url = (
             reverse("admin:school_assessmenttask_changelist")
             + f"?allocation__id__exact={obj.pk}"
@@ -397,7 +443,9 @@ class ClassSubjectAllocationAdmin(admin.ModelAdmin):
     def get_queryset(self, request):
         return super().get_queryset(request).select_related(
             "classroom__stream__pathway", "subject", "teacher"
-        ).annotate(_task_count=Count("tasks"))
+        ).annotate(
+            _task_count=Count("tasks", distinct=True)
+        )
 
 
 # ===========================================================================
@@ -474,18 +522,19 @@ class AssessmentTaskAdmin(admin.ModelAdmin):
     @admin.display(description="Type")
     def task_type_badge(self, obj):
         if obj.task_type == "FORMATIVE":
-            return format_html(
-                '<span style="background:#d4edda;color:#1a7a3e;padding:2px 8px;'
-                'border-radius:4px;font-size:0.8em;font-weight:600;">FORMATIVE</span>'
+            return mark_safe(
+                '<span style="background:#d4edda;color:#1a7a3e;padding:2px 8px;border-radius:4px;font-size:0.8em;font-weight:600;">FORMATIVE</span>'
             )
-        return format_html(
-            '<span style="background:#cce5ff;color:#004085;padding:2px 8px;'
-            'border-radius:4px;font-size:0.8em;font-weight:600;">SUMMATIVE</span>'
+        return mark_safe(
+            '<span style="background:#cce5ff;color:#004085;padding:2px 8px;border-radius:4px;font-size:0.8em;font-weight:600;">SUMMATIVE</span>'
         )
 
     @admin.display(description="Results")
     def result_count(self, obj):
-        count = obj.student_results.count()
+        if hasattr(obj, '_result_count'):
+            count = obj._result_count
+        else:
+            count = obj.student_results.count()
         url = (
             reverse("admin:school_learnerassessmentresult_changelist")
             + f"?assessment_task__id__exact={obj.pk}"
@@ -515,7 +564,9 @@ class AssessmentTaskAdmin(admin.ModelAdmin):
             "allocation__classroom__stream__pathway",
             "allocation__subject",
             "evaluating_teacher",
-        ).annotate(_result_count=Count("student_results"))
+        ).annotate(
+            _result_count=Count("student_results", distinct=True)
+        )
 
 
 # ===========================================================================
