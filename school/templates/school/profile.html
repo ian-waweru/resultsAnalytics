@@ -1,0 +1,104 @@
+{% extends 'base.html' %}
+
+{% block title %}Profile{% endblock %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto space-y-8">
+  <section class="rounded-3xl border border-slate-200 bg-white p-8 shadow-sm">
+    <div class="grid gap-6 lg:grid-cols-[1.5fr_1fr]">
+      <div class="space-y-4">
+        <div class="flex items-center gap-4">
+          <div class="flex h-16 w-16 items-center justify-center rounded-3xl bg-gradient-to-br from-blue-500 to-indigo-600 text-2xl font-bold text-white">
+            {{ profile_user.full_name|default:profile_user.username|first|upper }}
+          </div>
+          <div>
+            <p class="text-sm uppercase tracking-[0.24em] text-slate-500">Profile</p>
+            <h1 class="text-3xl font-semibold text-slate-900">{{ profile_user.full_name|default:profile_user.username }}</h1>
+            <p class="mt-1 text-sm text-slate-600">{{ role_label }} · {{ role_description }}</p>
+          </div>
+        </div>
+
+        <div class="grid gap-4 sm:grid-cols-2">
+          <div class="rounded-3xl border border-slate-200 bg-slate-50 p-5">
+            <p class="text-sm text-slate-500">Username</p>
+            <p class="mt-2 text-lg font-semibold text-slate-900">{{ profile_user.username }}</p>
+          </div>
+          <div class="rounded-3xl border border-slate-200 bg-slate-50 p-5">
+            <p class="text-sm text-slate-500">Email</p>
+            <p class="mt-2 text-lg font-semibold text-slate-900">{{ profile_user.email|default:'—' }}</p>
+          </div>
+          <div class="rounded-3xl border border-slate-200 bg-slate-50 p-5">
+            <p class="text-sm text-slate-500">TSC number</p>
+            <p class="mt-2 text-lg font-semibold text-slate-900">{{ profile_user.tsc_number|default:'Not provided' }}</p>
+          </div>
+          <div class="rounded-3xl border border-slate-200 bg-slate-50 p-5">
+            <p class="text-sm text-slate-500">Account status</p>
+            <p class="mt-2 text-lg font-semibold text-slate-900">{{ profile_user.is_active|yesno:'Active,Inactive' }}</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="rounded-3xl border border-slate-200 bg-slate-50 p-6">
+        <div class="space-y-4">
+          <div class="rounded-3xl bg-white p-5 shadow-sm">
+            <p class="text-sm text-slate-500">Role details</p>
+            <p class="mt-3 text-base text-slate-700">{% if profile_user.is_superuser %}This account has full system privileges, including access to school configuration and analytics across all departments.{% elif profile_user.is_hod %}This HOD account manages department-level reporting and teacher assignments, with access to school-wide analytics where relevant.{% elif profile_user.is_staff %}This teacher account is used for entering tasks, viewing student performance, and tracking class analytics.{% else %}This account has permissions to view school analytics dashboards and manage assigned tasks.{% endif %}</p>
+          </div>
+          <div class="rounded-3xl bg-white p-5 shadow-sm">
+            <p class="text-sm text-slate-500">Account metadata</p>
+            <dl class="mt-4 grid gap-4">
+              <div>
+                <dt class="text-sm text-slate-500">Joined</dt>
+                <dd class="mt-1 text-slate-900">{{ profile_user.date_joined|date:'M j, Y' }}</dd>
+              </div>
+              <div>
+                <dt class="text-sm text-slate-500">Last login</dt>
+                <dd class="mt-1 text-slate-900">{{ profile_user.last_login|default:'Never'|date:'M j, Y, g:i a' }}</dd>
+              </div>
+            </dl>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="mt-8 grid gap-6 lg:grid-cols-[1.5fr_1fr]">
+      <div class="grid gap-4 sm:grid-cols-2">
+        {% if metrics %}
+          {% for label, value in metrics %}
+          <div class="rounded-3xl border border-slate-200 bg-slate-50 p-5">
+            <p class="text-sm text-slate-500">{{ label }}</p>
+            <p class="mt-2 text-2xl font-semibold text-slate-900">{{ value }}</p>
+          </div>
+          {% endfor %}
+        {% else %}
+          <div class="rounded-3xl border border-slate-200 bg-slate-50 p-5">
+            <p class="text-sm text-slate-500">Account type</p>
+            <p class="mt-2 text-lg font-semibold text-slate-900">{{ role_label }}</p>
+          </div>
+        {% endif %}
+      </div>
+
+      <div class="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+        <p class="text-sm uppercase tracking-[0.24em] text-slate-500">Assigned classes</p>
+        {% if assignments %}
+        <ul class="mt-4 space-y-3">
+          {% for assignment in assignments %}
+          <li class="rounded-3xl border border-slate-200 bg-slate-50 px-4 py-4">
+            <p class="text-sm text-slate-500">{{ assignment.stream.name }}{% if assignment.stream.pathway %} {{ assignment.stream.pathway.get_code_display }}{% endif %}</p>
+            <p class="mt-1 text-base font-semibold text-slate-900">{{ assignment.classroom.name }} • {{ assignment.subject.name }}</p>
+          </li>
+          {% endfor %}
+        </ul>
+        {% else %}
+        <p class="mt-4 text-sm text-slate-600">No current assignments available for this account.</p>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="mt-8 grid gap-4 sm:grid-cols-2">
+      <a href="{% url 'password_change' %}" class="rounded-3xl border border-blue-600 bg-blue-50 px-6 py-5 text-sm font-semibold text-blue-700 transition hover:bg-blue-100">Change password</a>
+      <a href="{% url 'dashboard' %}" class="rounded-3xl border border-slate-200 bg-white px-6 py-5 text-sm font-semibold text-slate-900 transition hover:bg-slate-100">Back to dashboard</a>
+    </div>
+  </section>
+</div>
+{% endblock %}

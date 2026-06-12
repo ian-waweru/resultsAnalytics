@@ -24,7 +24,12 @@
             <p class="text-sm text-slate-500">Stream</p>
             <h2 class="text-2xl font-semibold text-slate-900">{{ stream_block.stream.name }}{% if stream_block.stream.pathway %} • {{ stream_block.stream.pathway.get_code_display }}{% endif %}</h2>
           </div>
-          <p class="text-sm text-slate-500">Top {{ stream_block.students|length }} students</p>
+          <div class="flex flex-col gap-3 sm:flex-row sm:items-center">
+            <a href="{% url 'stream_results' stream_block.stream.id %}" class="inline-flex items-center justify-center rounded-full bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-700">
+              View all stream results
+            </a>
+            <p class="text-sm text-slate-500">Top {{ stream_block.students|length }} students</p>
+          </div>
         </div>
 
         <div class="mt-6 grid gap-6 lg:grid-cols-3">

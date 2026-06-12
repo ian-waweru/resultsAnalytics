@@ -53,8 +53,8 @@
                                 </svg>
                             </button>
                             <div class="absolute right-0 mt-0 w-48 bg-white rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200">
-                                <a href="{% url 'admin:school_teacher_change' user.id %}" class="block px-4 py-2 text-gray-700 hover:bg-gray-50 text-sm border-b">Profile Settings</a>
-                                <a href="{% url 'admin:password_change' %}" class="block px-4 py-2 text-gray-700 hover:bg-gray-50 text-sm border-b">Change Password</a>
+                                <a href="{% url 'profile' %}" class="block px-4 py-2 text-gray-700 hover:bg-gray-50 text-sm border-b">Profile</a>
+                                <a href="{% url 'password_change' %}" class="block px-4 py-2 text-gray-700 hover:bg-gray-50 text-sm border-b">Change Password</a>
                                 <a href="{% url 'admin:index' %}" class="block px-4 py-2 text-gray-700 hover:bg-gray-50 text-sm border-b">Admin Panel</a>
                                 <form method="post" action="{% url 'logout' %}" class="block">
                                     {% csrf_token %}

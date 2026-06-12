@@ -1,6 +1,10 @@
 import json
-from django.shortcuts import render
+from django.shortcuts import render, get_object_or_404
 from django.contrib.auth.decorators import login_required
+from django.contrib.auth.views import PasswordChangeView, PasswordChangeDoneView
+from django.urls import reverse_lazy
+
+from .forms import StyledPasswordChangeForm
 from django.db.models import Avg, Count, Q, F, ExpressionWrapper, FloatField, Subquery, OuterRef
 from django.db.models.functions import Coalesce
 
@@ -537,3 +541,137 @@ def top_students(request):
         'top_students_by_stream': top_students_by_stream,
     }
     return render(request, 'school/top_students.html', context)
+
+
+class UserPasswordChangeView(PasswordChangeView):
+    template_name = 'school/password_change.html'
+    form_class = StyledPasswordChangeForm
+    success_url = reverse_lazy('password_change_done')
+
+
+class UserPasswordChangeDoneView(PasswordChangeDoneView):
+    template_name = 'school/password_change_done.html'
+
+
+@login_required
+def profile(request):
+    user = request.user
+    academic_year = 2026
+    term = 1
+
+    if user.is_superuser:
+        role_label = 'System administrator'
+        role_description = 'Full access to all school analytics and configuration settings.'
+        metrics_raw = {
+            'active_teachers': Teacher.objects.filter(is_staff=True, is_superuser=False).count(),
+            'active_hods': Teacher.objects.filter(is_hod=True, is_active=True).count(),
+            'current_allocations': ClassSubjectAllocation.objects.filter(academic_year=academic_year, term=term).count(),
+            'current_tasks': AssessmentTask.objects.filter(allocation__academic_year=academic_year, allocation__term=term).count(),
+        }
+        metrics = [
+            ('Active Teachers', metrics_raw['active_teachers']),
+            ('Active HODs', metrics_raw['active_hods']),
+            ('Current Allocations', metrics_raw['current_allocations']),
+            ('Current Tasks', metrics_raw['current_tasks']),
+        ]
+        assignments = []
+    elif user.is_staff:
+        role_label = 'Head of Department' if user.is_hod else 'Teacher'
+        role_description = (
+            'Oversees department performance and teacher assignments.'
+            if user.is_hod else
+            'Manages subject tasks, student results and classroom analytics.'
+        )
+
+        allocations_qs = ClassSubjectAllocation.objects.filter(
+            teacher=user,
+            academic_year=academic_year,
+            term=term
+        ).select_related('classroom__stream', 'subject')
+
+        assigned_class_ids = allocations_qs.values_list('classroom_id', flat=True).distinct()
+        student_count = StudentEnrollment.objects.filter(
+            classroom_id__in=assigned_class_ids,
+            academic_year=academic_year,
+            term=term,
+            is_active=True
+        ).values('student_id').distinct().count()
+
+        metrics_raw = {
+            'allocations': allocations_qs.count(),
+            'classes': assigned_class_ids.count(),
+            'students': student_count,
+            'tasks': AssessmentTask.objects.filter(allocation__in=allocations_qs).count(),
+        }
+        metrics = [
+            ('Subject Allocations', metrics_raw['allocations']),
+            ('Assigned Classes', metrics_raw['classes']),
+            ('Students', metrics_raw['students']),
+            ('Tasks', metrics_raw['tasks']),
+        ]
+
+        assignments = [
+            {
+                'classroom': alloc.classroom,
+                'subject': alloc.subject,
+                'stream': alloc.classroom.stream,
+            }
+            for alloc in allocations_qs[:5]
+        ]
+    else:
+        role_label = 'User'
+        role_description = 'School staff account with access to the analytics dashboard.'
+        metrics = []
+        assignments = []
+
+    context = {
+        'profile_user': user,
+        'role_label': role_label,
+        'role_description': role_description,
+        'metrics': metrics,
+        'assignments': assignments,
+        'academic_year': academic_year,
+        'term': term,
+    }
+    return render(request, 'school/profile.html', context)
+
+
+@login_required
+def stream_results(request, stream_id):
+    academic_year = 2026
+    term = 1
+
+    stream = get_object_or_404(Stream.objects.select_related('pathway'), id=stream_id)
+
+    students_qs = Student.objects.filter(
+        enrollments__academic_year=academic_year,
+        enrollments__term=term,
+        enrollments__is_active=True,
+        enrollments__classroom__stream=stream,
+        results__assessment_task__allocation__academic_year=academic_year,
+        results__assessment_task__allocation__term=term,
+    ).annotate(
+        avg_pct=Avg(
+            ExpressionWrapper(
+                F('results__score_achieved') * 100.0 / F('results__assessment_task__max_points'),
+                output_field=FloatField()
+            )
+        ),
+        result_count=Count(
+            'results',
+            filter=Q(
+                results__assessment_task__allocation__academic_year=academic_year,
+                results__assessment_task__allocation__term=term,
+            ),
+            distinct=True,
+        ),
+    ).filter(result_count__gt=0).order_by('-avg_pct', '-result_count', 'name').distinct()
+
+    context = {
+        'academic_year': academic_year,
+        'term': term,
+        'stream': stream,
+        'students': students_qs,
+        'student_count': students_qs.count(),
+    }
+    return render(request, 'school/stream_results.html', context)
