@@ -745,8 +745,9 @@ def allocation_detail(request, allocation_id):
 
 @login_required
 def top_students(request):
-    academic_year = 2026
-    term = 1
+    get_current_academic_context(request)
+    academic_year = request.academic_year
+    term = request.academic_term
 
     streams = Stream.objects.order_by('name').select_related('pathway')
     top_students_by_stream = []
@@ -802,9 +803,10 @@ class UserPasswordChangeDoneView(PasswordChangeDoneView):
 
 @login_required
 def profile(request):
+    get_current_academic_context(request)
+    academic_year = request.academic_year
+    term = request.academic_term
     user = request.user
-    academic_year = 2026
-    term = 1
 
     if user.is_superuser:
         role_label = 'System administrator'
@@ -885,8 +887,9 @@ def profile(request):
 
 @login_required
 def stream_results(request, stream_id):
-    academic_year = 2026
-    term = 1
+    get_current_academic_context(request)
+    academic_year = request.academic_year
+    term = request.academic_term
 
     stream = get_object_or_404(Stream.objects.select_related('pathway'), id=stream_id)
 
