@@ -40,9 +40,6 @@ from django.db import transaction
 
 from faker import Faker
 
-# ---------------------------------------------------------------------------
-# Import your models — adjust the import path if your app is named differently
-# ---------------------------------------------------------------------------
 from school.models import (
     AssessmentTask,
     ClassSubjectAllocation,
