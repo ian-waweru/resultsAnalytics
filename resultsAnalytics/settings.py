@@ -42,7 +42,7 @@ ALLOWED_HOSTS = env.list('ALLOWED_HOSTS')
 # Application definition
 
 INSTALLED_APPS = [
-    'unfold',
+    #'unfold',
     
     'django.contrib.admin',
     'django.contrib.auth',
@@ -77,6 +77,7 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                'school.utils.get_current_academic_context',
             ],
         },
     },

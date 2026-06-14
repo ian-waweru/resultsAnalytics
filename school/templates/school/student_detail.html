@@ -1,0 +1,307 @@
+{% extends 'base.html' %}
+
+{% block content %}
+
+<!-- Breadcrumb -->
+<nav class="mb-6 flex items-center gap-2 text-sm text-gray-500">
+    <a href="{% url 'student_list' %}" class="hover:text-blue-600 transition-colors no-underline">Students</a>
+    <svg class="w-4 h-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+    </svg>
+    <span class="text-gray-800 font-medium">{{ student.name }}</span>
+</nav>
+
+<!-- Profile Header Card -->
+<div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 mb-6">
+    <div class="flex flex-col sm:flex-row sm:items-center gap-6">
+
+        <!-- Avatar -->
+        <div class="w-20 h-20 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600
+                    flex items-center justify-center text-white text-3xl font-bold flex-shrink-0">
+            {{ student.name|first|upper }}
+        </div>
+
+        <!-- Identity -->
+        <div class="flex-1 min-w-0">
+            <h1 class="text-2xl font-bold text-gray-900 truncate">{{ student.name }}</h1>
+            <p class="text-sm text-gray-500 mt-0.5 font-mono">Adm. No. {{ student.admission_number }}</p>
+
+            <div class="mt-3 flex flex-wrap gap-3 text-sm">
+                {% if enrollment %}
+                <span class="inline-flex items-center gap-1.5 px-3 py-1 bg-blue-50 text-blue-700 rounded-full font-medium">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                              d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
+                    </svg>
+                    {{ enrollment.classroom }}
+                </span>
+                {% if enrollment.classroom.stream.pathway %}
+                <span class="inline-flex items-center gap-1.5 px-3 py-1 bg-indigo-50 text-indigo-700 rounded-full font-medium">
+                    {{ enrollment.classroom.stream.pathway.get_code_display }}
+                </span>
+                {% endif %}
+                {% endif %}
+
+                {% if student.date_of_birth %}
+                <span class="inline-flex items-center gap-1.5 px-3 py-1 bg-gray-100 text-gray-600 rounded-full">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                              d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                    </svg>
+                    DOB: {{ student.date_of_birth|date:"d M Y" }}
+                </span>
+                {% endif %}
+
+                <span class="inline-flex items-center gap-1.5 px-3 py-1 bg-gray-100 text-gray-600 rounded-full">
+                    {{ academic_year }} &middot; Term {{ term }}
+                </span>
+            </div>
+        </div>
+
+        <!-- Overall performance pill -->
+        <div class="sm:text-right flex-shrink-0">
+            <p class="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">Overall Average</p>
+            <div class="text-4xl font-extrabold
+                {% if overall_color == 'green' %}text-green-600
+                {% elif overall_color == 'blue' %}text-blue-600
+                {% elif overall_color == 'yellow' %}text-yellow-500
+                {% else %}text-red-500{% endif %}">
+                {{ overall_avg }}%
+            </div>
+            <p class="text-sm font-medium mt-1
+                {% if overall_color == 'green' %}text-green-600
+                {% elif overall_color == 'blue' %}text-blue-600
+                {% elif overall_color == 'yellow' %}text-yellow-500
+                {% else %}text-red-500{% endif %}">
+                {{ overall_level }}
+            </p>
+            <p class="text-xs text-gray-400 mt-1">{{ total_results }} result{{ total_results|pluralize }} recorded</p>
+        </div>
+    </div>
+</div>
+
+<!-- Two-column layout for wider screens -->
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+    <!-- Left: Subject Performance (2/3 width) -->
+    <div class="lg:col-span-2 space-y-4">
+
+        <h2 class="text-base font-bold text-gray-800">Performance by Subject</h2>
+
+        {% if subject_summaries %}
+            {% for entry in subject_summaries %}
+            <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+
+                <!-- Subject header -->
+                <div class="flex items-center justify-between px-5 py-3 border-b border-gray-50">
+                    <div class="flex items-center gap-3">
+                        <div class="w-2 h-8 rounded-full
+                            {% if entry.level_color == 'green' %}bg-green-400
+                            {% elif entry.level_color == 'blue' %}bg-blue-400
+                            {% elif entry.level_color == 'yellow' %}bg-yellow-400
+                            {% else %}bg-red-400{% endif %}">
+                        </div>
+                        <div>
+                            <p class="text-sm font-semibold text-gray-900">{{ entry.subject.name }}</p>
+                            <p class="text-xs text-gray-400">{{ entry.subject.get_category_display }}</p>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center gap-3">
+                        <!-- Mini progress bar -->
+                        <div class="hidden sm:flex items-center gap-2">
+                            <div class="w-24 bg-gray-100 rounded-full h-1.5 overflow-hidden">
+                                <div class="h-1.5 rounded-full
+                                    {% if entry.level_color == 'green' %}bg-green-500
+                                    {% elif entry.level_color == 'blue' %}bg-blue-500
+                                    {% elif entry.level_color == 'yellow' %}bg-yellow-400
+                                    {% else %}bg-red-400{% endif %}"
+                                    style="width: {{ entry.avg_pct }}%">
+                                </div>
+                            </div>
+                            <span class="text-sm font-bold text-gray-700">{{ entry.avg_pct }}%</span>
+                        </div>
+
+                        <!-- Level badge -->
+                        <span class="badge
+                            {% if entry.level_color == 'green' %}badge-success
+                            {% elif entry.level_color == 'blue' %}badge-primary
+                            {% elif entry.level_color == 'yellow' %}badge-warning
+                            {% else %}badge-danger{% endif %}">
+                            {{ entry.level }}
+                        </span>
+                    </div>
+                </div>
+
+                <!-- Task breakdown table -->
+                <div class="overflow-x-auto">
+                    <table class="min-w-full text-sm">
+                        <thead>
+                            <tr class="bg-gray-50/60">
+                                <th class="px-5 py-2 text-left text-xs text-gray-400 font-semibold uppercase tracking-wide">Task</th>
+                                <th class="px-5 py-2 text-left text-xs text-gray-400 font-semibold uppercase tracking-wide">Type</th>
+                                <th class="px-5 py-2 text-left text-xs text-gray-400 font-semibold uppercase tracking-wide">Score</th>
+                                <th class="px-5 py-2 text-left text-xs text-gray-400 font-semibold uppercase tracking-wide">%</th>
+                                <th class="px-5 py-2 text-left text-xs text-gray-400 font-semibold uppercase tracking-wide">Level</th>
+                                <th class="px-5 py-2 text-left text-xs text-gray-400 font-semibold uppercase tracking-wide">Date</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-50">
+                            {% for result in entry.results %}
+                            <tr class="hover:bg-gray-50/60 transition-colors">
+                                <td class="px-5 py-3 font-medium text-gray-700">
+                                    {{ result.assessment_task.title }}
+                                </td>
+                                <td class="px-5 py-3">
+                                    {% if result.assessment_task.task_type == 'FORMATIVE' %}
+                                        <span class="badge badge-primary">SBA</span>
+                                    {% else %}
+                                        <span class="badge badge-gray">Exam</span>
+                                    {% endif %}
+                                </td>
+                                <td class="px-5 py-3 text-gray-700">
+                                    {{ result.score_achieved }}&thinsp;/&thinsp;{{ result.assessment_task.max_points }}
+                                </td>
+                                <td class="px-5 py-3 font-semibold text-gray-800">
+                                    {{ result.percentage }}%
+                                </td>
+                                <td class="px-5 py-3">
+                                    {% with pct=result.percentage %}
+                                    {% if pct >= 80 %}
+                                        <span class="badge badge-success">EE</span>
+                                    {% elif pct >= 60 %}
+                                        <span class="badge badge-primary">ME</span>
+                                    {% elif pct >= 40 %}
+                                        <span class="badge badge-warning">AE</span>
+                                    {% else %}
+                                        <span class="badge badge-danger">BE</span>
+                                    {% endif %}
+                                    {% endwith %}
+                                </td>
+                                <td class="px-5 py-3 text-gray-400 text-xs">
+                                    {{ result.assessment_task.date_administered|date:"d M Y"|default:"—" }}
+                                </td>
+                            </tr>
+                            {% if result.teacher_remarks %}
+                            <tr>
+                                <td colspan="6" class="px-5 pb-3 text-xs text-gray-400 italic">
+                                    💬 {{ result.teacher_remarks }}
+                                </td>
+                            </tr>
+                            {% endif %}
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            {% endfor %}
+
+        {% else %}
+        <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-12 text-center">
+            <p class="text-gray-400 text-sm">No results recorded for this student in {{ academic_year }} Term {{ term }}.</p>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Right: Sidebar info (1/3 width) -->
+    <div class="space-y-5">
+
+        <!-- CBC Performance Summary -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
+            <h3 class="text-sm font-bold text-gray-700 mb-4 uppercase tracking-wide">CBC Level Summary</h3>
+            <div class="space-y-3">
+                {% for entry in subject_summaries %}
+                <div class="flex items-center justify-between text-sm">
+                    <span class="text-gray-600 truncate pr-2">{{ entry.subject.name }}</span>
+                    <div class="flex items-center gap-2 flex-shrink-0">
+                        <span class="text-xs font-semibold text-gray-500">{{ entry.avg_pct }}%</span>
+                        <span class="badge text-xs
+                            {% if entry.level_color == 'green' %}badge-success
+                            {% elif entry.level_color == 'blue' %}badge-primary
+                            {% elif entry.level_color == 'yellow' %}badge-warning
+                            {% else %}badge-danger{% endif %}">
+                            {{ entry.level }}
+                        </span>
+                    </div>
+                </div>
+                {% empty %}
+                <p class="text-gray-400 text-sm">No data yet.</p>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Pathway & Subject Selection -->
+        {% if subject_selection %}
+        <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
+            <h3 class="text-sm font-bold text-gray-700 mb-4 uppercase tracking-wide">Subject Selection</h3>
+            <div class="mb-3">
+                <p class="text-xs text-gray-400 uppercase font-semibold mb-1">Pathway</p>
+                <span class="badge badge-primary">{{ subject_selection.pathway.get_code_display }}</span>
+                {% if subject_selection.is_approved %}
+                    <span class="badge badge-success ml-2">Approved</span>
+                {% else %}
+                    <span class="badge badge-warning ml-2">Pending Approval</span>
+                {% endif %}
+            </div>
+            <div>
+                <p class="text-xs text-gray-400 uppercase font-semibold mb-2">Elective Subjects</p>
+                <div class="flex flex-wrap gap-1.5">
+                    {% for subject in subject_selection.elective_subjects.all %}
+                    <span class="badge badge-gray">{{ subject.name }}</span>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Enrollment Info -->
+        {% if enrollment %}
+        <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
+            <h3 class="text-sm font-bold text-gray-700 mb-4 uppercase tracking-wide">Enrollment</h3>
+            <dl class="space-y-2 text-sm">
+                <div class="flex justify-between">
+                    <dt class="text-gray-400">Classroom</dt>
+                    <dd class="text-gray-700 font-medium">{{ enrollment.classroom.name }}</dd>
+                </div>
+                <div class="flex justify-between">
+                    <dt class="text-gray-400">Stream</dt>
+                    <dd class="text-gray-700 font-medium">{{ enrollment.classroom.stream.name }}</dd>
+                </div>
+                {% if enrollment.classroom.stream.pathway %}
+                <div class="flex justify-between">
+                    <dt class="text-gray-400">Pathway</dt>
+                    <dd class="text-gray-700 font-medium">{{ enrollment.classroom.stream.pathway.code }}</dd>
+                </div>
+                {% endif %}
+                <div class="flex justify-between">
+                    <dt class="text-gray-400">Enrolled On</dt>
+                    <dd class="text-gray-700">{{ enrollment.enrolled_on|date:"d M Y" }}</dd>
+                </div>
+                <div class="flex justify-between">
+                    <dt class="text-gray-400">Status</dt>
+                    <dd>
+                        {% if enrollment.is_active %}
+                        <span class="badge badge-success">Active</span>
+                        {% else %}
+                        <span class="badge badge-danger">Inactive</span>
+                        {% endif %}
+                    </dd>
+                </div>
+            </dl>
+        </div>
+        {% endif %}
+
+        <!-- Back button -->
+        <a href="{% url 'student_list' %}"
+           class="flex items-center justify-center gap-2 w-full px-4 py-2.5 border border-gray-200
+                  text-sm font-medium text-gray-600 rounded-lg hover:bg-gray-50 transition-colors no-underline">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+            </svg>
+            Back to Students
+        </a>
+    </div>
+
+</div>
+
+{% endblock %}

@@ -4,11 +4,14 @@
 
 {% block content %}
 <div class="space-y-8">
+  <!-- Main Header -->
   <section class="bg-white border border-slate-200 rounded-3xl shadow-sm p-6">
     <div class="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
       <div class="space-y-2">
         <p class="text-sm uppercase tracking-[0.24em] text-slate-500">CBC Performance Dashboard</p>
-        <h1 class="text-2xl md:text-3xl font-semibold text-slate-900">School analytics — Term {{ term }}, {{ academic_year }}</h1>
+        <h1 class="text-2xl md:text-3xl font-semibold text-slate-900">
+          School analytics — Term {{ term }}, {{ academic_year }}
+        </h1>
       </div>
 
       <div class="flex flex-col sm:flex-row items-start sm:items-center gap-3">
@@ -16,25 +19,35 @@
           <div class="h-10 w-10 rounded-full bg-blue-600 text-white grid place-items-center font-semibold">{{ user_initials }}</div>
           <div>
             <p class="text-sm font-medium text-slate-900">{{ request.user.full_name }}</p>
-            <p class="text-xs text-slate-500">{{ request.user.email }}</p>
+            <p class="text-xs text-slate-500">{{ request.user.email|default:"" }}</p>
           </div>
         </div>
 
         {% if request.user.is_hod %}
-        <div class="inline-flex rounded-full border border-slate-200 overflow-hidden bg-slate-50 shadow-sm" role="group" aria-label="Switch dashboard role">
-          <button id="btn-teacher" type="button" class="px-4 py-2 text-sm font-medium text-slate-700 bg-white hover:bg-slate-100 transition" onclick="setRole('teacher')">Teacher view</button>
-          <button id="btn-hod" type="button" class="px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100 transition" onclick="setRole('hod')">HOD view</button>
+        <div class="inline-flex rounded-full border border-slate-200 overflow-hidden bg-slate-50 shadow-sm" role="group">
+          <button id="btn-teacher" type="button" 
+                  class="px-4 py-2 text-sm font-medium text-slate-700 bg-white hover:bg-slate-100 transition" 
+                  onclick="setRole('teacher')">Teacher View</button>
+          <button id="btn-hod" type="button" 
+                  class="px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100 transition" 
+                  onclick="setRole('hod')">HOD View</button>
         </div>
         {% endif %}
       </div>
     </div>
   </section>
 
+  <!-- ==================== TEACHER VIEW ==================== -->
   <section id="view-teacher" class="space-y-6">
     <div class="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-      <p class="text-sm text-slate-500">Good morning, <span class="font-semibold text-slate-900">{{ request.user.full_name }}</span>. You have <span class="font-semibold text-slate-900">{{ teacher_classes_count }}</span> active allocation{{ teacher_classes_count|pluralize }} and <span class="font-semibold text-slate-900">{{ pending_entries_count }}</span> pending entr{{ pending_entries_count|pluralize:"y,ies" }} this term.</p>
+      <p class="text-sm text-slate-500">
+        Good morning, <span class="font-semibold text-slate-900">{{ request.user.full_name }}</span>. 
+        You have <span class="font-semibold text-slate-900">{{ teacher_classes_count }}</span> active allocation{{ teacher_classes_count|pluralize }} 
+        and <span class="font-semibold text-slate-900">{{ pending_entries_count }}</span> pending entr{{ pending_entries_count|pluralize:"y,ies" }} this term.
+      </p>
     </div>
 
+    <!-- Metrics -->
     <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
       <article class="rounded-3xl border border-slate-200 bg-slate-50 p-5">
         <p class="text-sm text-slate-500">My students</p>
@@ -58,23 +71,35 @@
       </article>
     </div>
 
+    <!-- Clickable Classes + Chart -->
     <div class="grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
       <div class="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
         <div class="flex items-center justify-between gap-4 mb-5">
-          <h2 class="text-lg font-semibold text-slate-900">My classes</h2>
-          <span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium uppercase tracking-[0.2em] text-slate-500">{{ classes_data|length }} classes</span>
+          <h2 class="text-lg font-semibold text-slate-900">My Classes</h2>
+          <span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium uppercase tracking-[0.2em] text-slate-500">
+            {{ classes_data|length }} classes
+          </span>
         </div>
+        
         <div class="space-y-3">
           {% for cls in classes_data %}
-          <div class="rounded-3xl border border-slate-200 bg-slate-50 p-4 flex items-center justify-between gap-4">
+          <a href="#" 
+             onclick="showClassStudents({{ cls.allocation_id }}, '{{ cls.name|escapejs }}', '{{ cls.subject|escapejs }}')"
+             class="block rounded-3xl border border-slate-200 bg-slate-50 p-4 flex items-center justify-between gap-4 hover:border-blue-300 hover:shadow-md transition-all group cursor-pointer">
             <div>
-              <p class="font-medium text-slate-900">{{ cls.name }}</p>
+              <p class="font-medium text-slate-900 group-hover:text-blue-600">{{ cls.name }}</p>
               <p class="mt-1 text-sm text-slate-500">{{ cls.subject }} · {{ cls.student_count }} student{{ cls.student_count|pluralize }}</p>
             </div>
-            <span class="rounded-full px-3 py-1 text-sm font-semibold {% if cls.avg_level == 'EE' %}bg-emerald-100 text-emerald-700{% elif cls.avg_level == 'ME' %}bg-sky-100 text-sky-700{% elif cls.avg_level == 'AE' %}bg-amber-100 text-amber-800{% else %}bg-rose-100 text-rose-700{% endif %}">{{ cls.avg_level }} · {{ cls.avg_pct }}%</span>
-          </div>
+            <span class="rounded-full px-3 py-1 text-sm font-semibold 
+              {% if cls.avg_level == 'EE' %}bg-emerald-100 text-emerald-700
+              {% elif cls.avg_level == 'ME' %}bg-sky-100 text-sky-700
+              {% elif cls.avg_level == 'AE' %}bg-amber-100 text-amber-800
+              {% else %}bg-rose-100 text-rose-700{% endif %}">
+              {{ cls.avg_level }} · {{ cls.avg_pct }}%
+            </span>
+          </a>
           {% empty %}
-          <p class="text-sm text-slate-500">No active subject allocations located for this term.</p>
+          <p class="text-sm text-slate-500 py-8 text-center">No active subject allocations found for this term.</p>
           {% endfor %}
         </div>
       </div>
@@ -95,90 +120,82 @@
       </div>
     </div>
 
+    <!-- Quick Actions -->
     <div class="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-      <div class="flex items-center justify-between mb-5">
-        <h2 class="text-lg font-semibold text-slate-900">Quick actions</h2>
-      </div>
+      <h2 class="text-lg font-semibold text-slate-900 mb-5">Quick Actions</h2>
       <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <button type="button" class="group rounded-3xl border border-slate-200 bg-slate-50 p-5 text-left transition hover:border-blue-300 hover:bg-blue-50">
-          <div class="inline-flex h-12 w-12 items-center justify-center rounded-3xl bg-sky-100 text-sky-700 mb-4"><i class="ti ti-pencil text-lg"></i></div>
-          <p class="font-semibold text-slate-900">Enter results</p>
-          <p class="mt-1 text-sm text-slate-500">Log scores for a task</p>
-        </button>
-        <button type="button" class="group rounded-3xl border border-slate-200 bg-slate-50 p-5 text-left transition hover:border-rose-300 hover:bg-rose-50">
-          <div class="inline-flex h-12 w-12 items-center justify-center rounded-3xl bg-rose-100 text-rose-700 mb-4"><i class="ti ti-alert-triangle text-lg"></i></div>
-          <p class="font-semibold text-slate-900">At-risk students</p>
-          <p class="mt-1 text-sm text-slate-500">View BE-flagged learners</p>
-        </button>
-        <button type="button" class="group rounded-3xl border border-slate-200 bg-slate-50 p-5 text-left transition hover:border-emerald-300 hover:bg-emerald-50">
-          <div class="inline-flex h-12 w-12 items-center justify-center rounded-3xl bg-emerald-100 text-emerald-700 mb-4"><i class="ti ti-file-description text-lg"></i></div>
-          <p class="font-semibold text-slate-900">Generate report</p>
-          <p class="mt-1 text-sm text-slate-500">Export class summary</p>
-        </button>
-        <button type="button" class="group rounded-3xl border border-slate-200 bg-slate-50 p-5 text-left transition hover:border-amber-300 hover:bg-amber-50">
-          <div class="inline-flex h-12 w-12 items-center justify-center rounded-3xl bg-amber-100 text-amber-700 mb-4"><i class="ti ti-calendar text-lg"></i></div>
-          <p class="font-semibold text-slate-900">SBA schedule</p>
-          <p class="mt-1 text-sm text-slate-500">View upcoming tasks</p>
-        </button>
+        <!-- Add your quick action buttons here -->
       </div>
     </div>
   </section>
 
+  <!-- ==================== HOD VIEW (Comprehensive) ==================== -->
   {% if request.user.is_hod %}
   <section id="view-hod" class="hidden space-y-6">
     <div class="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-      <p class="text-sm text-slate-500">Good morning, <span class="font-semibold text-slate-900">{{ request.user.full_name }}</span>. Here are the school-wide results for Term {{ term }}, {{ academic_year }}.</p>
+      <div class="flex justify-between items-start">
+        <div>
+          <p class="text-sm text-slate-500">School-Wide Overview</p>
+          <h2 class="text-2xl font-semibold text-slate-900">Term {{ term }}, {{ academic_year }} • HOD Dashboard</h2>
+        </div>
+        <span class="inline-flex items-center gap-2 bg-emerald-100 text-emerald-700 text-xs font-medium px-3 py-1.5 rounded-2xl">
+          <span class="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></span> LIVE
+        </span>
+      </div>
     </div>
 
+    <!-- Metrics -->
     <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
       <article class="rounded-3xl border border-slate-200 bg-slate-50 p-5">
-        <p class="text-sm text-slate-500">Total students</p>
-        <p class="mt-3 text-3xl font-semibold text-slate-900">{{ total_students }}</p>
-        <p class="mt-2 text-sm text-slate-500">{{ total_classrooms }} active room{{ total_classrooms|pluralize }}</p>
+        <p class="text-sm text-slate-500">Total Students</p>
+        <p class="mt-3 text-4xl font-semibold text-slate-900">{{ total_students }}</p>
+        <p class="mt-2 text-sm text-slate-500">{{ total_classrooms }} classrooms</p>
       </article>
       <article class="rounded-3xl border border-slate-200 bg-slate-50 p-5">
-        <p class="text-sm text-slate-500">Teachers</p>
-        <p class="mt-3 text-3xl font-semibold text-slate-900">{{ total_teachers }}</p>
-        <p class="mt-2 text-sm text-slate-500">{{ total_hods }} HOD admin{{ total_hods|pluralize }}</p>
+        <p class="text-sm text-slate-500">Teaching Staff</p>
+        <p class="mt-3 text-4xl font-semibold text-slate-900">{{ total_teachers }}</p>
+        <p class="mt-2 text-sm text-slate-500">{{ total_hods }} HODs</p>
       </article>
       <article class="rounded-3xl border border-slate-200 bg-slate-50 p-5">
-        <p class="text-sm text-slate-500">School average</p>
-        <p class="mt-3 text-3xl font-semibold text-slate-900">{{ school_avg }}%</p>
-        <p class="mt-2 text-sm text-slate-500">Term {{ term }} performance</p>
+        <p class="text-sm text-slate-500">School Average</p>
+        <p class="mt-3 text-4xl font-semibold text-slate-900">{{ school_avg }}%</p>
+        <p class="mt-2 text-sm text-slate-500">Overall Performance</p>
       </article>
       <article class="rounded-3xl border border-slate-200 bg-slate-50 p-5">
-        <p class="text-sm text-slate-500">Below expectations</p>
-        <p class="mt-3 text-3xl font-semibold text-slate-900">{{ school_be_students_count }}</p>
+        <p class="text-sm text-slate-500">At-Risk Students</p>
+        <p class="mt-3 text-4xl font-semibold text-rose-600">{{ school_be_students_count }}</p>
         <p class="mt-2 text-sm text-slate-500">{{ be_cohort_percentage }}% of cohort</p>
       </article>
     </div>
 
-    <div class="grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
-      <div class="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-        <div class="flex items-center justify-between gap-4 mb-5">
-          <h2 class="text-lg font-semibold text-slate-900">Performance by department</h2>
-          <div class="flex flex-wrap gap-2 text-sm text-slate-500">
-            <span class="inline-flex items-center gap-2"><span class="h-2.5 w-2.5 rounded-full bg-emerald-600"></span>EE</span>
-            <span class="inline-flex items-center gap-2"><span class="h-2.5 w-2.5 rounded-full bg-sky-600"></span>ME</span>
-            <span class="inline-flex items-center gap-2"><span class="h-2.5 w-2.5 rounded-full bg-amber-600"></span>AE</span>
-            <span class="inline-flex items-center gap-2"><span class="h-2.5 w-2.5 rounded-full bg-rose-600"></span>BE</span>
+    <div class="grid gap-6 xl:grid-cols-12">
+      <!-- Department Performance -->
+      <div class="xl:col-span-7 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+        <div class="flex items-center justify-between mb-6">
+          <h2 class="text-lg font-semibold text-slate-900">Performance by Department</h2>
+          <div class="flex gap-4 text-sm text-slate-500">
+            <span class="flex items-center gap-1.5"><span class="h-3 w-3 rounded-full bg-emerald-600"></span>EE</span>
+            <span class="flex items-center gap-1.5"><span class="h-3 w-3 rounded-full bg-sky-600"></span>ME</span>
+            <span class="flex items-center gap-1.5"><span class="h-3 w-3 rounded-full bg-amber-600"></span>AE</span>
+            <span class="flex items-center gap-1.5"><span class="h-3 w-3 rounded-full bg-rose-600"></span>BE</span>
           </div>
         </div>
-        <div class="h-[360px] rounded-3xl bg-slate-50 p-4">
-          <canvas id="hodChart" role="img" aria-label="Department performance split chart"></canvas>
+        <div class="h-96">
+          <canvas id="hodChart"></canvas>
         </div>
       </div>
 
-      <div class="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-        <h2 class="text-lg font-semibold text-slate-900 mb-5">Alerts & notices</h2>
-        <div class="space-y-3">
+      <!-- Alerts -->
+      <div class="xl:col-span-5 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+        <h2 class="text-lg font-semibold mb-5">Alerts &amp; Interventions</h2>
+        <div class="space-y-4 max-h-96 overflow-auto">
           {% for alert in alerts %}
-          <div class="rounded-3xl border-l-4 p-4 {% if alert.type == 'warn' %}border-amber-300 bg-amber-50 text-amber-900{% else %}border-sky-300 bg-sky-50 text-sky-900{% endif %}">
-            <div class="flex items-start gap-3">
-              <span class="mt-1 inline-flex h-9 w-9 items-center justify-center rounded-2xl bg-white text-lg {% if alert.type == 'warn' %}text-amber-700{% else %}text-sky-700{% endif %}">{% if alert.type == 'warn' %}!</span>{% else %}i{% endif %}</span>
+          <div class="rounded-2xl border-l-4 p-5 {% if alert.type == 'warn' %}border-rose-400 bg-rose-50{% else %}border-sky-400 bg-sky-50{% endif %}">
+            <div class="flex gap-4">
+              <div class="text-2xl">{% if alert.type == 'warn' %}⚠️{% else %}ℹ️{% endif %}</div>
               <div>
                 <p class="font-medium">{{ alert.text }}</p>
-                <p class="mt-2 text-sm text-slate-500">{{ alert.time }}</p>
+                <p class="text-xs text-slate-500 mt-1">{{ alert.time }}</p>
               </div>
             </div>
           </div>
@@ -187,40 +204,13 @@
       </div>
     </div>
 
+    <!-- Trend Chart -->
     <div class="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-      <div class="flex items-center justify-between mb-5">
-        <h2 class="text-lg font-semibold text-slate-900">Performance trend — school average by subject</h2>
-        <div id="hodTrendLegend" class="flex flex-wrap gap-3 text-sm text-slate-500"></div>
+      <h2 class="text-lg font-semibold mb-6">School Performance Trend</h2>
+      <div class="h-96">
+        <canvas id="hodTrend"></canvas>
       </div>
-      <div class="h-[360px] rounded-3xl bg-slate-50 p-4">
-        <canvas id="hodTrend" role="img" aria-label="School subject trend chart"></canvas>
-      </div>
-    </div>
-
-    <div class="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-      <h2 class="text-lg font-semibold text-slate-900 mb-5">Quick actions</h2>
-      <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <button type="button" class="group rounded-3xl border border-slate-200 bg-slate-50 p-5 text-left transition hover:border-blue-300 hover:bg-blue-50">
-          <div class="inline-flex h-12 w-12 items-center justify-center rounded-3xl bg-rose-100 text-rose-700 mb-4"><i class="ti ti-user-x text-lg"></i></div>
-          <p class="font-semibold text-slate-900">Pending entries</p>
-          <p class="mt-1 text-sm text-slate-500">Chase missing results</p>
-        </button>
-        <button type="button" class="group rounded-3xl border border-slate-200 bg-slate-50 p-5 text-left transition hover:border-emerald-300 hover:bg-emerald-50">
-          <div class="inline-flex h-12 w-12 items-center justify-center rounded-3xl bg-emerald-100 text-emerald-700 mb-4"><i class="ti ti-report text-lg"></i></div>
-          <p class="font-semibold text-slate-900">School report</p>
-          <p class="mt-1 text-sm text-slate-500">Export full term summary</p>
-        </button>
-        <button type="button" class="group rounded-3xl border border-slate-200 bg-slate-50 p-5 text-left transition hover:border-amber-300 hover:bg-amber-50">
-          <div class="inline-flex h-12 w-12 items-center justify-center rounded-3xl bg-amber-100 text-amber-700 mb-4"><i class="ti ti-user-exclamation text-lg"></i></div>
-          <p class="font-semibold text-slate-900">At-risk cohort</p>
-          <p class="mt-1 text-sm text-slate-500">Review BE students school-wide</p>
-        </button>
-        <button type="button" class="group rounded-3xl border border-slate-200 bg-slate-50 p-5 text-left transition hover:border-sky-300 hover:bg-sky-50">
-          <div class="inline-flex h-12 w-12 items-center justify-center rounded-3xl bg-sky-100 text-sky-700 mb-4"><i class="ti ti-chart-dots text-lg"></i></div>
-          <p class="font-semibold text-slate-900">Compare classes</p>
-          <p class="mt-1 text-sm text-slate-500">Cross-class analysis</p>
-        </button>
-      </div>
+      <div id="hodTrendLegend" class="flex flex-wrap gap-4 mt-4"></div>
     </div>
   </section>
   {% endif %}
@@ -229,107 +219,171 @@
 
 {% block extra_js %}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+
+<!-- Class Students Modal -->
+<div id="classModal" class="hidden fixed inset-0 bg-black bg-opacity-60 z-[200] flex items-center justify-center p-4">
+  <div class="bg-white rounded-3xl shadow-2xl max-w-5xl w-full max-h-[92vh] flex flex-col overflow-hidden">
+    <div class="flex justify-between items-center border-b px-6 py-4 bg-slate-50">
+      <div>
+        <h2 id="modalClassName" class="text-xl font-semibold text-slate-900"></h2>
+        <p id="modalSubject" class="text-slate-500"></p>
+      </div>
+      <button onclick="closeModal()" class="text-4xl leading-none text-slate-400 hover:text-slate-600">&times;</button>
+    </div>
+    <div class="p-6 overflow-auto flex-1" id="modalContent"></div>
+  </div>
+</div>
+
 <script>
+// ====================== CHARTS INITIALIZATION ======================
+
+const cbcColors = {
+  ee: '#10b981',
+  me: '#3b82f6',
+  ae: '#f59e0b',
+  be: '#ef4444'
+};
+
+// Teacher Chart - Class Performance Split
+if (document.getElementById('teacherChart')) {
+  new Chart(document.getElementById('teacherChart'), {
+    type: 'bar',
+    data: {
+      labels: {{ teacher_chart_labels|safe }},
+      datasets: [
+        { label: 'EE', data: {{ teacher_chart_ee|safe }}, backgroundColor: cbcColors.ee, borderRadius: 6, stack: 's' },
+        { label: 'ME', data: {{ teacher_chart_me|safe }}, backgroundColor: cbcColors.me, borderRadius: 6, stack: 's' },
+        { label: 'AE', data: {{ teacher_chart_ae|safe }}, backgroundColor: cbcColors.ae, borderRadius: 6, stack: 's' },
+        { label: 'BE', data: {{ teacher_chart_be|safe }}, backgroundColor: cbcColors.be, borderRadius: 6, stack: 's' },
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { stacked: true, grid: { display: false } },
+        y: { stacked: true, max: 100, ticks: { callback: v => v + '%' } }
+      }
+    }
+  });
+}
+
+// HOD Department Performance Chart
+if (document.getElementById('hodChart')) {
+  new Chart(document.getElementById('hodChart'), {
+    type: 'bar',
+    data: {
+      labels: {{ hod_chart_labels|safe }},
+      datasets: [
+        { label: 'EE', data: {{ hod_chart_ee|safe }}, backgroundColor: cbcColors.ee, borderRadius: 6, stack: 's' },
+        { label: 'ME', data: {{ hod_chart_me|safe }}, backgroundColor: cbcColors.me, borderRadius: 6, stack: 's' },
+        { label: 'AE', data: {{ hod_chart_ae|safe }}, backgroundColor: cbcColors.ae, borderRadius: 6, stack: 's' },
+        { label: 'BE', data: {{ hod_chart_be|safe }}, backgroundColor: cbcColors.be, borderRadius: 6, stack: 's' },
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { stacked: true, grid: { display: false } },
+        y: { stacked: true, max: 100, ticks: { callback: v => v + '%' } }
+      }
+    }
+  });
+}
+
+// HOD Trend Chart
+if (document.getElementById('hodTrend')) {
+  const trendSubjects = ['Mathematics','Sciences','Languages','Humanities','Technicals'];
+  const trendColors = ['#10b981','#3b82f6','#f59e0b','#ef4444','#6366f1'];
+  const trendData = {{ hod_trend_data|safe }};
+
+  // Build Legend
+  const legendEl = document.getElementById('hodTrendLegend');
+  if (legendEl) {
+    trendSubjects.forEach((subject, i) => {
+      const span = document.createElement('span');
+      span.className = 'inline-flex items-center gap-2 text-sm';
+      span.innerHTML = `<span class="h-3 w-3 rounded-full" style="background:${trendColors[i]}"></span>${subject}`;
+      legendEl.appendChild(span);
+    });
+  }
+
+  new Chart(document.getElementById('hodTrend'), {
+    type: 'line',
+    data: {
+      labels: ['Mid-term SBA', 'Portfolio Task', 'End of Term Exam'],
+      datasets: trendSubjects.map((subject, i) => ({
+        label: subject,
+        data: trendData[i] || [0, 0, 0],
+        borderColor: trendColors[i],
+        backgroundColor: 'transparent',
+        borderWidth: 3,
+        tension: 0.4,
+        pointRadius: 5,
+      }))
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        y: { min: 30, max: 90, ticks: { callback: v => v + '%' } },
+        x: { grid: { display: false } }
+      }
+    }
+  });
+}
+
+// ====================== MODAL & ROLE SWITCHER ======================
+async function showClassStudents(allocationId, className, subject) {
+  const modal = document.getElementById('classModal');
+  const content = document.getElementById('modalContent');
+  
+  document.getElementById('modalClassName').textContent = className;
+  document.getElementById('modalSubject').textContent = subject + " — Performance Overview";
+  
+  modal.classList.remove('hidden');
+  content.innerHTML = `<div class="flex justify-center py-20"><div class="animate-spin h-10 w-10 border-4 border-blue-600 border-t-transparent rounded-full"></div></div>`;
+
+  try {
+    const response = await fetch(`/school/class-students/${allocationId}/`);
+    if (!response.ok) throw new Error();
+    content.innerHTML = await response.text();
+  } catch (e) {
+    content.innerHTML = `<div class="text-center py-12 text-red-600">Unable to load student data at the moment.</div>`;
+  }
+}
+
+function closeModal() {
+  document.getElementById('classModal').classList.add('hidden');
+}
+
+document.getElementById('classModal').addEventListener('click', function(e) {
+  if (e.target === this) closeModal();
+});
+
 function setRole(role) {
   document.getElementById('view-teacher').classList.toggle('hidden', role !== 'teacher');
   const hodView = document.getElementById('view-hod');
   if (hodView) hodView.classList.toggle('hidden', role !== 'hod');
-  document.getElementById('btn-teacher').classList.toggle('bg-white', role === 'teacher');
-  document.getElementById('btn-teacher').classList.toggle('text-slate-900', role === 'teacher');
-  document.getElementById('btn-hod')?.classList.toggle('bg-white', role === 'hod');
-  document.getElementById('btn-hod')?.classList.toggle('text-slate-900', role === 'hod');
+  
+  const btnTeacher = document.getElementById('btn-teacher');
+  const btnHod = document.getElementById('btn-hod');
+  
+  if (btnTeacher) {
+    btnTeacher.classList.toggle('bg-white', role === 'teacher');
+    btnTeacher.classList.toggle('text-slate-900', role === 'teacher');
+  }
+  if (btnHod) {
+    btnHod.classList.toggle('bg-white', role === 'hod');
+    btnHod.classList.toggle('text-slate-900', role === 'hod');
+  }
 }
 
-const cbcColors = {
-  ee: { bg: '#639922', border: '#3B6D11' },
-  me: { bg: '#378ADD', border: '#185FA5' },
-  ae: { bg: '#BA7517', border: '#854F0B' },
-  be: { bg: '#E24B4A', border: '#A32D2D' },
-};
-
-const baseOpts = {
-  responsive: true,
-  maintainAspectRatio: false,
-  plugins: {
-    legend: { display: false },
-    tooltip: { callbacks: { label: ctx => ' ' + ctx.parsed.y + '%' } },
-  },
-  scales: {
-    x: { grid: { display: false }, ticks: { font: { size: 11 } } },
-    y: { display: false, stacked: true, max: 100 },
-  },
-};
-
-new Chart(document.getElementById('teacherChart'), {
-  type: 'bar',
-  data: {
-    labels: {{ teacher_chart_labels|safe }},
-    datasets: [
-      { label: 'EE', data: {{ teacher_chart_ee|safe }}, backgroundColor: cbcColors.ee.bg, borderRadius: 6, stack: 's' },
-      { label: 'ME', data: {{ teacher_chart_me|safe }}, backgroundColor: cbcColors.me.bg, borderRadius: 6, stack: 's' },
-      { label: 'AE', data: {{ teacher_chart_ae|safe }}, backgroundColor: cbcColors.ae.bg, borderRadius: 6, stack: 's' },
-      { label: 'BE', data: {{ teacher_chart_be|safe }}, backgroundColor: cbcColors.be.bg, borderRadius: 6, stack: 's' },
-    ],
-  },
-  options: { ...baseOpts, scales: { ...baseOpts.scales, x: { ...baseOpts.scales.x, stacked: true } } },
-});
-
-{% if request.user.is_hod %}
-new Chart(document.getElementById('hodChart'), {
-  type: 'bar',
-  data: {
-    labels: {{ hod_chart_labels|safe }},
-    datasets: [
-      { label: 'EE', data: {{ hod_chart_ee|safe }}, backgroundColor: cbcColors.ee.bg, borderRadius: 6, stack: 's' },
-      { label: 'ME', data: {{ hod_chart_me|safe }}, backgroundColor: cbcColors.me.bg, borderRadius: 6, stack: 's' },
-      { label: 'AE', data: {{ hod_chart_ae|safe }}, backgroundColor: cbcColors.ae.bg, borderRadius: 6, stack: 's' },
-      { label: 'BE', data: {{ hod_chart_be|safe }}, backgroundColor: cbcColors.be.bg, borderRadius: 6, stack: 's' },
-    ],
-  },
-  options: { ...baseOpts, scales: { ...baseOpts.scales, x: { ...baseOpts.scales.x, stacked: true } } },
-});
-
-const trendSubjects = ['Mathematics','Sciences','Languages','Humanities','Technicals'];
-const trendColors = ['#639922','#378ADD','#BA7517','#E24B4A','#185FA5'];
-const trendData = {{ hod_trend_data|safe }};
-
-const legendEl = document.getElementById('hodTrendLegend');
-if (legendEl) {
-  trendSubjects.forEach((subject, index) => {
-    const badge = document.createElement('span');
-    badge.className = 'inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-500';
-    badge.innerHTML = `<span class="h-2.5 w-2.5 rounded-full" style="background:${trendColors[index]}"></span>${subject}`;
-    legendEl.appendChild(badge);
-  });
-}
-
-new Chart(document.getElementById('hodTrend'), {
-  type: 'line',
-  data: {
-    labels: ['Mid-term SBA','Portfolio Task','End of Term Exam'],
-    datasets: trendSubjects.map((subject, index) => ({
-      label: subject,
-      data: trendData[index],
-      borderColor: trendColors[index],
-      backgroundColor: 'transparent',
-      borderWidth: 3,
-      pointRadius: 4,
-      pointBackgroundColor: trendColors[index],
-      tension: 0.35,
-    })),
-  },
-  options: {
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: { legend: { display: false } },
-    scales: {
-      x: { grid: { display: false }, ticks: { font: { size: 11 } } },
-      y: { min: 40, max: 90, ticks: { callback: v => v + '%', font: { size: 11 } }, grid: { color: 'rgba(148,163,184,0.15)' } },
-    },
-  },
-});
-{% endif %}
-
+// Initialize default view
 setRole('teacher');
 </script>
 {% endblock %}

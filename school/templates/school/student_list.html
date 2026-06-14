@@ -1,0 +1,199 @@
+{% extends 'base.html' %}
+
+{% block content %}
+
+<!-- Page Header -->
+<div class="mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <div>
+        <h1 class="text-2xl font-bold text-gray-900">Students</h1>
+        <p class="text-sm text-gray-500 mt-1">
+            {{ academic_year }} &middot; Term {{ term }} &middot;
+            <span class="font-medium text-gray-700">{{ student_count }} student{{ student_count|pluralize }}</span>
+        </p>
+    </div>
+</div>
+
+<!-- Search & Filter Bar -->
+<div class="bg-white rounded-xl shadow-sm border border-gray-100 p-4 mb-6">
+    <form method="get" class="flex flex-col sm:flex-row gap-3">
+        <!-- Search input -->
+        <div class="relative flex-1">
+            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                          d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                </svg>
+            </div>
+            <input type="text" name="q" value="{{ query }}"
+                   placeholder="Search by name or admission number…"
+                   class="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+        </div>
+
+        <!-- Stream filter -->
+        <div class="sm:w-56">
+            <select name="stream"
+                    class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <option value="">All Streams</option>
+                {% for stream in streams %}
+                    <option value="{{ stream.id }}" {% if selected_stream == stream.id|stringformat:"s" %}selected{% endif %}>
+                        {{ stream }}
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <button type="submit"
+                class="px-5 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors">
+            Filter
+        </button>
+
+        {% if query or selected_stream %}
+        <a href="{% url 'student_list' %}"
+           class="px-4 py-2 text-gray-600 text-sm font-medium border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors text-center no-underline">
+            Clear
+        </a>
+        {% endif %}
+    </form>
+</div>
+
+<!-- Student Table -->
+{% if students %}
+<div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+    <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-gray-100">
+            <thead>
+                <tr>
+                    <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">#</th>
+                    <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Student</th>
+                    <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Adm. No.</th>
+                    <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Stream / Class</th>
+                    <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Avg %</th>
+                    <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">CBC Level</th>
+                    <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Results</th>
+                    <th class="px-6 py-3"></th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-50">
+                {% for student in students %}
+                {% with avg=student.avg_pct|default:0 %}
+                <tr class="hover:bg-blue-50/40 transition-colors cursor-pointer"
+                    onclick="window.location='{% url 'student_detail' student.id %}'">
+
+                    <!-- Row number -->
+                    <td class="px-6 py-4 text-sm text-gray-400 font-mono">{{ forloop.counter }}</td>
+
+                    <!-- Name + avatar -->
+                    <td class="px-6 py-4">
+                        <div class="flex items-center gap-3">
+                            <div class="w-9 h-9 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600
+                                        flex items-center justify-center text-white text-sm font-bold flex-shrink-0">
+                                {{ student.name|first|upper }}
+                            </div>
+                            <span class="text-sm font-semibold text-gray-900">{{ student.name }}</span>
+                        </div>
+                    </td>
+
+                    <!-- Admission number -->
+                    <td class="px-6 py-4 text-sm text-gray-500 font-mono">{{ student.admission_number }}</td>
+
+                    <!-- Stream / classroom -->
+                    <td class="px-6 py-4 text-sm text-gray-600">
+                        {% with enr=student.enrollments.all %}
+                        {% for e in enr %}
+                            {% if e.academic_year == academic_year and e.term == term and e.is_active %}
+                                {{ e.classroom }}
+                            {% endif %}
+                        {% endfor %}
+                        {% endwith %}
+                    </td>
+
+                    <!-- Avg percentage -->
+                    <td class="px-6 py-4">
+                        {% if student.result_count %}
+                            <div class="flex items-center gap-2">
+                                <div class="flex-1 bg-gray-100 rounded-full h-1.5 w-20 overflow-hidden">
+                                    <div class="h-1.5 rounded-full
+                                        {% if avg >= 80 %}bg-green-500
+                                        {% elif avg >= 60 %}bg-blue-500
+                                        {% elif avg >= 40 %}bg-yellow-400
+                                        {% else %}bg-red-400{% endif %}"
+                                        style="width: {{ avg }}%">
+                                    </div>
+                                </div>
+                                <span class="text-sm font-semibold text-gray-800">{{ avg|floatformat:1 }}%</span>
+                            </div>
+                        {% else %}
+                            <span class="text-xs text-gray-400 italic">No results</span>
+                        {% endif %}
+                    </td>
+
+                    <!-- CBC Level badge -->
+                    <td class="px-6 py-4">
+                        {% if student.result_count %}
+                            {% if avg >= 80 %}
+                                <span class="badge badge-success">EE</span>
+                            {% elif avg >= 60 %}
+                                <span class="badge badge-primary">ME</span>
+                            {% elif avg >= 40 %}
+                                <span class="badge badge-warning">AE</span>
+                            {% else %}
+                                <span class="badge badge-danger">BE</span>
+                            {% endif %}
+                        {% else %}
+                            <span class="badge badge-gray">—</span>
+                        {% endif %}
+                    </td>
+
+                    <!-- Result count -->
+                    <td class="px-6 py-4 text-sm text-gray-500">
+                        {{ student.result_count|default:"0" }}
+                    </td>
+
+                    <!-- Arrow -->
+                    <td class="px-6 py-4 text-right">
+                        <a href="{% url 'student_detail' student.id %}"
+                           class="text-blue-600 hover:text-blue-700 no-underline"
+                           onclick="event.stopPropagation()">
+                            <svg class="w-5 h-5 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                      d="M9 5l7 7-7 7"/>
+                            </svg>
+                        </a>
+                    </td>
+                </tr>
+                {% endwith %}
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{% else %}
+<!-- Empty state -->
+<div class="bg-white rounded-xl shadow-sm border border-gray-100 p-16 text-center">
+    <div class="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+        <svg class="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                  d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857
+                     M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857
+                     m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/>
+        </svg>
+    </div>
+    <h3 class="text-lg font-semibold text-gray-700 mb-1">No students found</h3>
+    <p class="text-sm text-gray-400">
+        {% if query or selected_stream %}
+            Try adjusting your search or filter.
+        {% else %}
+            No active enrolments found for {{ academic_year }} Term {{ term }}.
+        {% endif %}
+    </p>
+    {% if query or selected_stream %}
+    <a href="{% url 'student_list' %}"
+       class="mt-4 inline-block px-4 py-2 text-sm text-blue-600 border border-blue-200 rounded-lg hover:bg-blue-50 no-underline transition-colors">
+        Clear filters
+    </a>
+    {% endif %}
+</div>
+{% endif %}
+
+{% endblock %}

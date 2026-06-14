@@ -1,67 +1,92 @@
 {% extends 'base.html' %}
 
-{% block title %}Recent Assessment Tasks{% endblock %}
+{% block title %}Assessment Tasks{% endblock %}
 
 {% block content %}
-<div class="space-y-6">
-  <section class="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-    <div class="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+<div class="space-y-8">
+  <!-- Header -->
+  <section class="bg-white border border-slate-200 rounded-3xl shadow-sm p-6">
+    <div class="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
       <div>
-        <p class="text-sm uppercase tracking-[0.24em] text-slate-500">Recent assessment tasks</p>
-        <h1 class="text-3xl font-semibold text-slate-900">Latest 3 tasks per stream</h1>
+        <p class="text-sm uppercase tracking-[0.24em] text-slate-500">Assessment Tasks</p>
+        <h1 class="text-3xl font-semibold text-slate-900">
+          {% if is_hod_view %}School-Wide Tasks{% else %}My Assessment Tasks{% endif %}
+        </h1>
       </div>
-      <p class="text-sm text-slate-500">Term {{ term }}, {{ academic_year }}</p>
+      <div class="flex items-center gap-4">
+        <p class="text-sm text-slate-500">Term {{ term }}, {{ academic_year }}</p>
+        {% if request.user.is_hod %}
+        <div class="inline-flex rounded-full border border-slate-200 overflow-hidden bg-slate-50 shadow-sm" role="group">
+          <a href="?view=teacher" 
+            class="px-5 py-2 text-sm font-medium transition {% if not is_hod_view %}bg-white shadow text-slate-900{% else %}text-slate-700{% endif %}">
+            My Tasks
+          </a>
+          <a href="?view=hod" 
+            class="px-5 py-2 text-sm font-medium transition {% if is_hod_view %}bg-white shadow text-slate-900{% else %}text-slate-700{% endif %}">
+            All School Tasks
+          </a>
+        </div>
+        {% endif %}
+      </div>
     </div>
-    <p class="mt-3 text-slate-600">This page surfaces the three most recently administered assessment tasks for each stream this term.</p>
   </section>
 
   {% if streams_with_recent_tasks %}
     <div class="space-y-8">
       {% for block in streams_with_recent_tasks %}
       <section class="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-        <div class="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+        <div class="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
           <div>
             <p class="text-sm text-slate-500">Stream</p>
-            <h2 class="text-2xl font-semibold text-slate-900">{{ block.stream.name }}{% if block.stream.pathway %} • {{ block.stream.pathway.get_code_display }}{% endif %}</h2>
+            <h2 class="text-2xl font-semibold text-slate-900">
+              {{ block.stream.name }}
+              {% if block.stream.pathway %} • {{ block.stream.pathway.get_code_display }}{% endif %}
+            </h2>
           </div>
-          <div class="flex flex-col gap-3 sm:flex-row sm:items-center">
-            <a href="{% url 'stream_results' block.stream.id %}" class="inline-flex items-center justify-center rounded-full bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-700">
-              View stream results
+          <div class="flex gap-3">
+            <a href="{% url 'stream_results' block.stream.id %}" 
+               class="inline-flex items-center justify-center rounded-full bg-blue-600 px-5 py-2 text-sm font-semibold text-white hover:bg-blue-700 transition">
+              View Stream Results
             </a>
-            <div class="rounded-3xl bg-slate-100 px-4 py-3 text-sm font-semibold text-slate-700">
-              {{ block.tasks|length }} recent task{{ block.tasks|length|pluralize }}
-            </div>
           </div>
         </div>
 
-        <div class="mt-6 space-y-4">
+        <div class="mt-8 grid gap-5">
           {% for task in block.tasks %}
-          <article class="rounded-3xl border border-slate-200 bg-slate-50 p-5 shadow-sm hover:border-blue-300 transition-colors">
-            <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-              <div class="space-y-2">
-                <p class="text-sm uppercase tracking-[0.24em] text-slate-500">{{ task.get_task_type_display }}</p>
-                <h3 class="text-xl font-semibold text-slate-900">{{ task.title }}</h3>
-                <p class="text-sm text-slate-600">
-                  {{ task.allocation.subject.name }} • {{ task.allocation.classroom.stream.name }} {{ task.allocation.classroom.name }}
-                </p>
+          <article class="rounded-3xl border border-slate-200 p-6 hover:border-blue-200 transition-all">
+            <div class="flex flex-col lg:flex-row lg:items-center gap-6">
+              <div class="flex-1">
+                <div class="flex items-center gap-3">
+                  <span class="px-3 py-1 text-xs font-medium rounded-full 
+                    {% if task.task_type == 'FORMATIVE' %}bg-amber-100 text-amber-700{% else %}bg-indigo-100 text-indigo-700{% endif %}">
+                    {{ task.get_task_type_display }}
+                  </span>
+                  <span class="text-sm text-slate-500">{{ task.allocation.classroom }}</span>
+                </div>
+                <h3 class="text-xl font-semibold mt-2">{{ task.title }}</h3>
+                <p class="text-slate-600">{{ task.allocation.subject.name }}</p>
               </div>
-              <div class="grid gap-2 sm:grid-cols-3 text-center text-sm">
-                <div class="rounded-3xl bg-white px-3 py-3 shadow-sm">
-                  <p class="text-slate-500">Date</p>
-                  <p class="mt-1 font-semibold text-slate-900">{{ task.date_administered|date:'M j, Y'|default:'Unscheduled' }}</p>
+
+              <div class="grid grid-cols-3 gap-4 text-center">
+                <div>
+                  <p class="text-xs text-slate-500">DATE</p>
+                  <p class="font-semibold">{{ task.date_administered|date:"d M Y"|default:"—" }}</p>
                 </div>
-                <div class="rounded-3xl bg-white px-3 py-3 shadow-sm">
-                  <p class="text-slate-500">Average score</p>
-                  <p class="mt-1 font-semibold text-slate-900">{{ task.avg_pct|floatformat:1 }}%</p>
+                <div>
+                  <p class="text-xs text-slate-500">AVG SCORE</p>
+                  <p class="font-semibold text-lg">{{ task.avg_pct|floatformat:1 }}%</p>
                 </div>
-                <div class="rounded-3xl bg-white px-3 py-3 shadow-sm">
-                  <p class="text-slate-500">Entries</p>
-                  <p class="mt-1 font-semibold text-slate-900">{{ task.entry_count }}</p>
+                <div>
+                  <p class="text-xs text-slate-500">ENTRIES</p>
+                  <p class="font-semibold">{{ task.entry_count }} / {{ task.allocation.classroom.enrollments.count|default:"—" }}</p>
                 </div>
               </div>
             </div>
+
             {% if task.evaluating_teacher %}
-            <p class="mt-4 text-sm text-slate-500">Evaluated by {{ task.evaluating_teacher.full_name }}</p>
+            <p class="mt-4 text-sm text-slate-500 border-t pt-4">
+              Evaluated by <strong>{{ task.evaluating_teacher.full_name }}</strong>
+            </p>
             {% endif %}
           </article>
           {% endfor %}
@@ -70,9 +95,25 @@
       {% endfor %}
     </div>
   {% else %}
-    <div class="rounded-3xl border border-slate-200 bg-slate-50 p-6 shadow-sm text-slate-600">
-      No recent assessment tasks exist for the current term.
+    <div class="rounded-3xl bg-slate-50 border border-slate-200 p-12 text-center">
+      <p class="text-slate-500">No assessment tasks found for the current term.</p>
     </div>
   {% endif %}
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function setRole(role) {
+  const url = new URL(window.location);
+  url.searchParams.set('view', role);
+  window.location.href = url.toString();
+}
+
+// Auto switch if URL has ?view=hod
+const urlParams = new URLSearchParams(window.location.search);
+if (urlParams.get('view') === 'hod' && document.getElementById('btn-hod')) {
+  // You can enhance this further if needed
+}
+</script>
 {% endblock %}

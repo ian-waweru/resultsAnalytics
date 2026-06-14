@@ -1,0 +1,76 @@
+<div class="space-y-6">
+  <!-- Header Summary -->
+  <div class="flex justify-between items-center bg-slate-50 -mx-6 -mt-6 px-6 py-4 border-b">
+    <div>
+      <p class="text-sm text-slate-500">Total Students</p>
+      <p class="text-3xl font-semibold text-slate-900">{{ students|length }}</p>
+    </div>
+    <div class="text-right">
+      <p class="text-sm text-slate-500">Class Average</p>
+      {% if students %}
+        {% with first_student=students|first %}
+          <p class="text-2xl font-semibold text-slate-900">
+            {{ first_student.avg_pct|default:0|floatformat:1 }}%
+          </p>
+        {% endwith %}
+      {% else %}
+        <p class="text-slate-400">—</p>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Students Grid -->
+  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+    {% for student in students %}
+    <div class="border border-slate-200 rounded-2xl p-5 hover:shadow transition-all group">
+      <div class="flex justify-between items-start">
+        <div class="flex-1 min-w-0">
+          <p class="font-semibold text-slate-900 truncate">{{ student.name }}</p>
+          <p class="text-xs text-slate-500 font-mono">{{ student.admission_number }}</p>
+        </div>
+        
+        {% if student.avg_pct is not None %}
+        <div class="text-right">
+          <div class="text-2xl font-bold 
+            {% if student.avg_pct >= 80 %}text-emerald-600
+            {% elif student.avg_pct >= 60 %}text-sky-600
+            {% elif student.avg_pct >= 40 %}text-amber-600
+            {% else %}text-rose-600{% endif %}">
+            {{ student.avg_pct|floatformat:1 }}%
+          </div>
+          <div class="text-[10px] font-medium uppercase tracking-widest mt-0.5">
+            {% if student.avg_pct >= 80 %}EE
+            {% elif student.avg_pct >= 60 %}ME
+            {% elif student.avg_pct >= 40 %}AE
+            {% else %}BE{% endif %}
+          </div>
+        </div>
+        {% else %}
+        <div class="text-xs text-slate-400">No results</div>
+        {% endif %}
+      </div>
+
+      <!-- Progress Bar -->
+      <div class="mt-4 h-2.5 bg-slate-100 rounded-full overflow-hidden">
+        <div class="h-full transition-all duration-300 rounded-full
+          {% if student.avg_pct >= 80 %}bg-emerald-500
+          {% elif student.avg_pct >= 60 %}bg-sky-500
+          {% elif student.avg_pct >= 40 %}bg-amber-500
+          {% else %}bg-rose-500{% endif %}" 
+          style="width: {{ student.avg_pct|default:0 }}%"></div>
+      </div>
+
+      <div class="mt-4 flex justify-end">
+        <a href="{% url 'student_detail' student.id %}" 
+           class="text-xs text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1">
+          View full profile →
+        </a>
+      </div>
+    </div>
+    {% empty %}
+    <div class="col-span-full py-16 text-center">
+      <p class="text-slate-400">No students enrolled in this class for the current term.</p>
+    </div>
+    {% endfor %}
+  </div>
+</div>
