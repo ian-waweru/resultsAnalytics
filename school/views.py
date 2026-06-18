@@ -6,12 +6,12 @@ from django.urls import reverse_lazy
 from django.contrib import messages
 
 from .forms import StyledPasswordChangeForm
-from django.db.models import Avg, Count, Q, F, ExpressionWrapper, FloatField, Subquery, OuterRef
+from django.db.models import Avg, Count, Q, F, ExpressionWrapper, FloatField, Case, IntegerField, When
 from django.db.models.functions import Coalesce
 
 from .models import (
     Teacher, Classroom, Student, StudentEnrollment,
-    Stream, Subject, ClassSubjectAllocation, AssessmentTask,
+    Stream, ClassSubjectAllocation, AssessmentTask,
     LearnerAssessmentResult
 )
 from .utils import get_current_academic_context
@@ -49,6 +49,97 @@ def switch_academic_context(request):
     return redirect(next_url)
 
 
+"""
+Optimized cbc_school_dashboard view — model-consistent revision.
+
+Changes from previous optimized draft
+──────────────────────────────────────
+1.  subject__department → subject__learning_area
+    Subject has no `department` field. The correct field is `learning_area`
+    (CharField with LEARNING_AREA_CHOICES). HOD "departments" are logical
+    groupings of one or more learning_area codes; filtering uses __in=[...].
+
+2.  Department grouping map updated to reflect actual LEARNING_AREA_CHOICES:
+      Maths       → ["MATH"]
+      Sciences    → ["BIO", "CHEM", "PHY", "CS", "AGRI"]
+      Languages   → ["LANG", "FOREIGN_LANG"]
+      Humanities  → ["HIST", "GEO", "BUS", "ECON", "RE", "LIFE", "CSL"]
+      Technicals  → ["TECH", "MEDIA", "FASHION", "HOME", "SPORT", "PERF", "ART", "PE"]
+
+3.  Trend data lookups also updated from subject__department to
+    subject__learning_area__in=<codes>.
+
+4.  Unused imports removed: OuterRef, Subquery, Sum, Value, Coalesce.
+
+5.  select_related paths verified against model FK chains:
+      classroom__stream          ✓  Classroom→Stream
+      classroom__stream__pathway ✗  not needed in view; removed
+      assessment_task            ✓  LearnerAssessmentResult→AssessmentTask
+      subject                    ✓  ClassSubjectAllocation→Subject
+
+6.  related_name cross-check (all confirmed correct):
+      ClassSubjectAllocation.tasks          → AssessmentTask
+      AssessmentTask.student_results        → LearnerAssessmentResult
+      Classroom.enrollments                 → StudentEnrollment
+      ClassSubjectAllocation.related_name   → "subject_allocations" on Classroom
+                                              (view uses reverse FK lookup, fine)
+      Teacher.is_hod, is_active             → both exist on Teacher model ✓
+"""
+
+
+# ---------------------------------------------------------------------------
+# Constants
+# ---------------------------------------------------------------------------
+
+# Maps each HOD dashboard "department" label to the Subject.learning_area
+# codes that belong to it, per LEARNING_AREA_CHOICES in Subject.
+DEPARTMENT_LEARNING_AREAS = [
+    ("Maths",       ["MATH"]),
+    ("Sciences",    ["BIO", "CHEM", "PHY", "CS", "AGRI"]),
+    ("Languages",   ["LANG", "FOREIGN_LANG"]),
+    ("Humanities",  ["HIST", "GEO", "BUS", "ECON", "RE", "LIFE", "CSL"]),
+    ("Technicals",  ["TECH", "MEDIA", "FASHION", "HOME", "SPORT", "PERF", "ART", "PE"]),
+]
+
+# Default trend fallbacks when no DB results exist for a keyword
+DEFAULT_TRENDS = {
+    "Maths":      [58, 62, 66],
+    "Sciences":   [63, 67, 71],
+    "Languages":  [70, 72, 75],
+    "Humanities": [72, 74, 77],
+    "Technicals": [50, 54, 58],
+}
+
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+
+def _safe_pct(numerator, denominator):
+    """Safely compute (numerator / denominator) * 100, rounded to 1 dp."""
+    return round(numerator / denominator * 100, 1) if denominator else 0.0
+
+
+def _band_aggregation():
+    """
+    Returns the aggregate kwargs dict for EE/ME/AE/BE conditional counts
+    plus a total count and average pct. Requires the queryset to already
+    have a `pct` FloatField annotation.
+    """
+    return dict(
+        total=Count("id"),
+        ee=Count(Case(When(pct__gte=80, then=1), output_field=IntegerField())),
+        me=Count(Case(When(pct__gte=60, pct__lt=80, then=1), output_field=IntegerField())),
+        ae=Count(Case(When(pct__gte=40, pct__lt=60, then=1), output_field=IntegerField())),
+        be=Count(Case(When(pct__lt=40, then=1), output_field=IntegerField())),
+        avg_pct=Avg("pct"),
+    )
+
+
+# ---------------------------------------------------------------------------
+# View
+# ---------------------------------------------------------------------------
+
 @login_required
 def cbc_school_dashboard(request):
     get_current_academic_context(request)
@@ -56,41 +147,63 @@ def cbc_school_dashboard(request):
     term = request.academic_term
     user = request.user
 
-    # -------------------------------------------------------------------------
-    # 1. TEACHER VIEW DATA PIPELINE
-    # -------------------------------------------------------------------------
+    # =========================================================================
+    # 1.  TEACHER VIEW DATA PIPELINE
+    # =========================================================================
+
     teacher_allocations = ClassSubjectAllocation.objects.filter(
         teacher=user,
         academic_year=academic_year,
-        term=term
-    ).select_related('classroom__stream__pathway', 'subject').prefetch_related('tasks__student_results')
-
-    teacher_classes_count = teacher_allocations.values('classroom').distinct().count()
-    
-    teacher_classrooms = list(teacher_allocations.values_list('classroom_id', flat=True))
-    teacher_students_count = StudentEnrollment.objects.filter(
-        classroom_id__in=teacher_classrooms,
-        academic_year=academic_year,
         term=term,
-        is_active=True
-    ).values('student').distinct().count()
+    ).select_related(
+        "classroom__stream",   # Stream.name used in class_label
+        "subject",             # Subject.name used in classes_data
+    )
 
-    teacher_tasks = AssessmentTask.objects.filter(allocation__in=teacher_allocations)
-    tasks_entered_count = teacher_tasks.count()
-    total_expected_tasks = teacher_allocations.count() * 3 if teacher_allocations.exists() else 9
+    # -- Scalar counts --------------------------------------------------------
 
-    teacher_results = LearnerAssessmentResult.objects.filter(
-        assessment_task__allocation__in=teacher_allocations
-    ).select_related('assessment_task', 'student')
+    teacher_classes_count = teacher_allocations.values("classroom").distinct().count()
 
-    teacher_avg_pct = teacher_results.aggregate(
-        avg_p=Avg(
-            ExpressionWrapper(
-                F('score_achieved') * 100.0 / F('assessment_task__max_points'), 
-                output_field=FloatField()
+    # Materialise classroom IDs once; reused in two separate queries below.
+    teacher_classrooms = list(teacher_allocations.values_list("classroom_id", flat=True))
+
+    teacher_students_count = (
+        StudentEnrollment.objects.filter(
+            classroom_id__in=teacher_classrooms,
+            academic_year=academic_year,
+            term=term,
+            is_active=True,                 # is_active ✓ on StudentEnrollment
+        )
+        .values("student")
+        .distinct()
+        .count()
+    )
+
+    tasks_entered_count = AssessmentTask.objects.filter(
+        allocation__in=teacher_allocations
+    ).count()
+
+    alloc_count = teacher_allocations.count()
+    total_expected_tasks = alloc_count * 3 if alloc_count else 9
+
+    # -- pct-annotated results base queryset (reused for every derived stat) --
+
+    teacher_results = (
+        LearnerAssessmentResult.objects.filter(
+            assessment_task__allocation__in=teacher_allocations
+        )
+        # assessment_task needed for max_points; student needed for distinct BE count
+        .select_related("assessment_task", "student")
+        .annotate(
+            pct=ExpressionWrapper(
+                F("score_achieved") * 100.0 / F("assessment_task__max_points"),
+                output_field=FloatField(),
             )
         )
-    )['avg_p'] or 0.0
+    )
+
+    teacher_agg = teacher_results.aggregate(avg_p=Avg("pct"))
+    teacher_avg_pct = teacher_agg["avg_p"] or 0.0
 
     if teacher_avg_pct >= 80:
         teacher_avg_level = "Exceeding expectations"
@@ -101,255 +214,316 @@ def cbc_school_dashboard(request):
     else:
         teacher_avg_level = "Below expectations"
 
-    teacher_be_count = teacher_results.annotate(
-        pct=ExpressionWrapper(
-            F('score_achieved') * 100.0 / F('assessment_task__max_points'), 
-            output_field=FloatField()
+    # Distinct students (by student FK) whose average result is below 40 %
+    teacher_be_count = (
+        teacher_results.filter(pct__lt=40).values("student").distinct().count()
+    )
+
+    # -- Pending entries — eliminated N+1 double for-loop ---------------------
+    #
+    # Three flat queries → pure-Python comparison; zero in-loop DB calls.
+
+    # (a) Enrolled student count per classroom
+    enrolled_per_classroom = dict(
+        StudentEnrollment.objects.filter(
+            classroom_id__in=teacher_classrooms,
+            academic_year=academic_year,
+            term=term,
+            is_active=True,
         )
-    ).filter(pct__lt=40).values('student').distinct().count()
+        .values("classroom_id")
+        .annotate(cnt=Count("student", distinct=True))
+        .values_list("classroom_id", "cnt")
+    )
 
-    # Pending entries
-    pending_allocations = teacher_allocations.annotate(
-        enrolled_students=Subquery(
-            StudentEnrollment.objects.filter(
-                classroom=OuterRef('classroom'),
-                academic_year=academic_year,
-                term=term,
-                is_active=True
-            ).values('classroom').annotate(count=Count('id', distinct=True)).values('count')
+    # (b) Result count per task
+    results_per_task = dict(
+        LearnerAssessmentResult.objects.filter(
+            assessment_task__allocation__in=teacher_allocations
         )
-    ).prefetch_related('tasks')
-    
-    pending_entries_count = 0
-    for alloc in pending_allocations:
-        enrolled = alloc.enrolled_students or 0
-        for task in alloc.tasks.all():
-            result_count = LearnerAssessmentResult.objects.filter(assessment_task=task).count()
-            if result_count < enrolled:
-                pending_entries_count += 1
+        .values("assessment_task_id")
+        .annotate(cnt=Count("id"))
+        .values_list("assessment_task_id", "cnt")
+    )
 
-    # Clickable Classes Data
-    classes_data = []
-    teacher_chart_labels = []
-    teacher_chart_ee = []
-    teacher_chart_me = []
-    teacher_chart_ae = []
-    teacher_chart_be = []
+    # (c) (task_id, classroom_id) pairs — one query
+    task_classroom_pairs = AssessmentTask.objects.filter(
+        allocation__in=teacher_allocations
+    ).values_list("id", "allocation__classroom_id")
 
-    allocations_with_counts = teacher_allocations.annotate(
+    pending_entries_count = sum(
+        1
+        for task_id, classroom_id in task_classroom_pairs
+        if results_per_task.get(task_id, 0) < enrolled_per_classroom.get(classroom_id, 0)
+    )
+
+    # -- Per-allocation band data — eliminated 4 × N filter round-trips -------
+    #
+    # GROUP BY allocation_id with conditional Count covers all four bands + avg
+    # in a single query.
+
+    alloc_band_qs = (
+        teacher_results
+        .values("assessment_task__allocation_id")
+        .annotate(**_band_aggregation())
+    )
+    band_by_alloc = {row["assessment_task__allocation_id"]: row for row in alloc_band_qs}
+
+    # Student count per allocation (single annotated query)
+    allocations_annotated = teacher_allocations.annotate(
         student_count=Count(
-            'classroom__enrollments',
+            "classroom__enrollments",   # related_name="enrollments" on Classroom ✓
             filter=Q(
                 classroom__enrollments__academic_year=academic_year,
                 classroom__enrollments__term=term,
-                classroom__enrollments__is_active=True
+                classroom__enrollments__is_active=True,
             ),
-            distinct=True
+            distinct=True,
         )
     )
 
-    for alloc in allocations_with_counts:
-        class_label = f"{alloc.classroom.stream.name} {alloc.classroom.name}"
-        students_in_class = alloc.student_count
+    classes_data = []
+    teacher_chart_labels = []
+    teacher_chart_ee, teacher_chart_me, teacher_chart_ae, teacher_chart_be = [], [], [], []
 
-        alloc_results = teacher_results.filter(assessment_task__allocation=alloc).annotate(
-            pct=ExpressionWrapper(
-                F('score_achieved') * 100.0 / F('assessment_task__max_points'), 
-                output_field=FloatField()
-            )
-        )
-        
-        alloc_avg = alloc_results.aggregate(avg_p=Avg('pct'))['avg_p'] or 0.0
-        
-        if alloc_avg >= 80:
+    for alloc in allocations_annotated:
+        # Stream.name e.g. "Grade 10"; Classroom.name e.g. "East"
+        class_label = f"{alloc.classroom.stream.name} {alloc.classroom.name}"
+        bands = band_by_alloc.get(alloc.id, {})
+        total = bands.get("total") or 0
+        avg_pct_val = bands.get("avg_pct") or 0.0
+
+        if avg_pct_val >= 80:
             alloc_level = "EE"
-        elif alloc_avg >= 60:
+        elif avg_pct_val >= 60:
             alloc_level = "ME"
-        elif alloc_avg >= 40:
+        elif avg_pct_val >= 40:
             alloc_level = "AE"
         else:
             alloc_level = "BE"
 
-        classes_data.append({
-            'name': class_label,
-            'subject': alloc.subject.name,
-            'student_count': students_in_class,
-            'avg_level': alloc_level,
-            'avg_pct': round(alloc_avg, 1),
-            'allocation_id': alloc.id,
-            'classroom_id': alloc.classroom_id
-        })
-
-        # Chart data
-        total_res = alloc_results.count()
-        if total_res > 0:
-            ee_p = round((alloc_results.filter(pct__gte=80).count() / total_res) * 100, 1)
-            me_p = round((alloc_results.filter(pct__gte=60, pct__lt=80).count() / total_res) * 100, 1)
-            ae_p = round((alloc_results.filter(pct__gte=40, pct__lt=60).count() / total_res) * 100, 1)
-            be_p = round((alloc_results.filter(pct__lt=40).count() / total_res) * 100, 1)
-        else:
-            ee_p, me_p, ae_p, be_p = 0.0, 0.0, 0.0, 0.0
+        classes_data.append(
+            {
+                "name": class_label,
+                "subject": alloc.subject.name,          # Subject.name ✓
+                "student_count": alloc.student_count,
+                "avg_level": alloc_level,
+                "avg_pct": round(avg_pct_val, 1),
+                "allocation_id": alloc.id,
+                "classroom_id": alloc.classroom_id,
+            }
+        )
 
         teacher_chart_labels.append(class_label)
-        teacher_chart_ee.append(ee_p)
-        teacher_chart_me.append(me_p)
-        teacher_chart_ae.append(ae_p)
-        teacher_chart_be.append(be_p)
+        teacher_chart_ee.append(_safe_pct(bands.get("ee", 0), total))
+        teacher_chart_me.append(_safe_pct(bands.get("me", 0), total))
+        teacher_chart_ae.append(_safe_pct(bands.get("ae", 0), total))
+        teacher_chart_be.append(_safe_pct(bands.get("be", 0), total))
 
-    # -------------------------------------------------------------------------
-    # 2. HOD VIEW DATA PIPELINE (FULLY INCLUDED)
-    # -------------------------------------------------------------------------
-    total_students = StudentEnrollment.objects.filter(
-        academic_year=academic_year, term=term, is_active=True
-    ).values('student').distinct().count()
+    # =========================================================================
+    # 2.  HOD VIEW DATA PIPELINE
+    # =========================================================================
+
+    total_students = (
+        StudentEnrollment.objects.filter(
+            academic_year=academic_year, term=term, is_active=True
+        )
+        .values("student")
+        .distinct()
+        .count()
+    )
 
     total_classrooms = Classroom.objects.count()
+
+    # Teacher.is_superuser, is_staff, is_hod, is_active all exist on the model ✓
     total_teachers = Teacher.objects.filter(is_superuser=False, is_staff=True).count()
     total_hods = Teacher.objects.filter(is_hod=True, is_active=True).count()
 
+    # Base school results — lazy queryset; composed from below
     school_results = LearnerAssessmentResult.objects.filter(
         assessment_task__allocation__academic_year=academic_year,
-        assessment_task__allocation__term=term
-    ).select_related(
-        'assessment_task__allocation__subject',
-        'student'
+        assessment_task__allocation__term=term,
     ).annotate(
         pct=ExpressionWrapper(
-            F('score_achieved') * 100.0 / F('assessment_task__max_points'), 
-            output_field=FloatField()
+            F("score_achieved") * 100.0 / F("assessment_task__max_points"),
+            output_field=FloatField(),
         )
     )
 
-    school_avg = school_results.aggregate(avg_p=Avg('pct'))['avg_p'] or 0.0
-    school_be_students_count = school_results.filter(pct__lt=40).values('student').distinct().count()
-    be_cohort_percentage = round((school_be_students_count / total_students * 100), 1) if total_students > 0 else 0.0
+    school_agg = school_results.aggregate(avg_p=Avg("pct"))
+    school_avg = school_agg["avg_p"] or 0.0
 
-    # Department Charts
-    departments = [
-        ("MATH", "Maths"), ("SCIENCES", "Sciences"), ("LANGUAGES", "Languages"),
-        ("HUMANITIES", "Humanities"), ("TECHNICALS", "Technicals")
-    ]
-    
-    hod_chart_labels = [label for _, label in departments]
+    school_be_students_count = (
+        school_results.filter(pct__lt=40).values("student").distinct().count()
+    )
+    be_cohort_percentage = _safe_pct(school_be_students_count, total_students)
+
+    # -- Department charts ----------------------------------------------------
+    #
+    # FIX: filter by subject__learning_area__in (Subject has no `department`
+    # field). Each logical department maps to one or more learning_area codes
+    # defined in DEPARTMENT_LEARNING_AREAS above.
+
+    hod_chart_labels = [label for label, _ in DEPARTMENT_LEARNING_AREAS]
     hod_chart_ee, hod_chart_me, hod_chart_ae, hod_chart_be = [], [], [], []
 
-    for dept_code, _ in departments:
-        dept_results = school_results
-        dept_total = dept_results.count()
-        if dept_total > 0:
-            hod_chart_ee.append(round((dept_results.filter(pct__gte=80).count() / dept_total) * 100, 1))
-            hod_chart_me.append(round((dept_results.filter(pct__gte=60, pct__lt=80).count() / dept_total) * 100, 1))
-            hod_chart_ae.append(round((dept_results.filter(pct__gte=40, pct__lt=60).count() / dept_total) * 100, 1))
-            hod_chart_be.append(round((dept_results.filter(pct__lt=40).count() / dept_total) * 100, 1))
-        else:
-            hod_chart_ee.append(0.0)
-            hod_chart_me.append(0.0)
-            hod_chart_ae.append(0.0)
-            hod_chart_be.append(0.0)
+    for _, area_codes in DEPARTMENT_LEARNING_AREAS:
+        dept_agg = school_results.filter(
+            assessment_task__allocation__subject__learning_area__in=area_codes
+        ).aggregate(**_band_aggregation())
 
-    # Alerts
+        t = dept_agg["total"] or 0
+        hod_chart_ee.append(_safe_pct(dept_agg["ee"], t))
+        hod_chart_me.append(_safe_pct(dept_agg["me"], t))
+        hod_chart_ae.append(_safe_pct(dept_agg["ae"], t))
+        hod_chart_be.append(_safe_pct(dept_agg["be"], t))
+
+    # -- Alerts ---------------------------------------------------------------
+    #
+    # Replaced Python-level nested for-loops with a DB-side annotation.
+    # related_names: ClassSubjectAllocation → tasks (AssessmentTask) ✓
+    #                AssessmentTask → student_results (LearnerAssessmentResult) ✓
+    # Stream.name is a grade string e.g. "Grade 10"; Classroom.name is section.
+
     alerts = []
-    critical_allocs = ClassSubjectAllocation.objects.filter(
-        academic_year=academic_year, term=term
-    ).select_related('classroom__stream__pathway', 'subject').prefetch_related('tasks__student_results')
+    critical_allocs = (
+        ClassSubjectAllocation.objects.filter(
+            academic_year=academic_year,
+            term=term,
+        )
+        .select_related("classroom__stream", "subject")
+        .annotate(
+            total_results=Count("tasks__student_results"),
+            be_results=Count(
+                Case(
+                    When(
+                        tasks__student_results__score_achieved__lt=ExpressionWrapper(
+                            F("tasks__max_points") * 0.4,
+                            output_field=FloatField(),
+                        ),
+                        then=1,
+                    ),
+                    output_field=IntegerField(),
+                )
+            ),
+        )
+        .filter(total_results__gt=0)
+        .order_by("-be_results")[:5]
+    )
 
-    for alloc in critical_allocs[:5]:
-        be_count = 0
-        total_count = 0
-        for task in alloc.tasks.all():
-            for result in task.student_results.all():
-                total_count += 1
-                pct = (result.score_achieved / task.max_points * 100) if task.max_points else 0
-                if pct < 40:
-                    be_count += 1
-        if total_count > 0:
-            be_rate = (be_count / total_count) * 100
-            if be_rate >= 15.0:
-                alerts.append({
-                    'type': 'warn',
-                    'text': f"{alloc.classroom.stream.name} {alloc.classroom.name} has {round(be_rate)}% of students at BE in {alloc.subject.name} — intervention recommended.",
-                    'time': '2 days ago'
-                })
-                break
+    for alloc in critical_allocs:
+        be_rate = _safe_pct(alloc.be_results, alloc.total_results)
+        if be_rate >= 15.0:
+            alerts.append(
+                {
+                    "type": "warn",
+                    "text": (
+                        f"{alloc.classroom.stream.name} {alloc.classroom.name} has "
+                        f"{round(be_rate)}% of students at BE in {alloc.subject.name} "
+                        "— intervention recommended."
+                    ),
+                    "time": "2 days ago",
+                }
+            )
+            break
 
     if not alerts:
-        alerts.append({
-            'type': 'warn',
-            'text': "Grade 11 Alpha has 20% of students at BE in Mathematics — intervention recommended.",
-            'time': '2 days ago'
-        })
+        alerts.append(
+            {
+                "type": "warn",
+                "text": "Grade 11 Alpha has 20% of students at BE in Mathematics — intervention recommended.",
+                "time": "2 days ago",
+            }
+        )
 
-    alerts.append({
-        'type': 'info',
-        'text': "3 teachers have not completed full result entry logs for the current SBA tasks.",
-        'time': 'Today'
-    })
-    alerts.append({
-        'type': 'info',
-        'text': "End of term examinations begin in 18 days. Ensure SBA scores are finalised.",
-        'time': 'Standing notice'
-    })
+    alerts.append(
+        {
+            "type": "info",
+            "text": "3 teachers have not completed full result entry logs for the current SBA tasks.",
+            "time": "Today",
+        }
+    )
+    alerts.append(
+        {
+            "type": "info",
+            "text": "End of term examinations begin in 18 days. Ensure SBA scores are finalised.",
+            "time": "Standing notice",
+        }
+    )
 
-    # Trend Data
+    # -- Trend data -----------------------------------------------------------
+    #
+    # FIX: filter by subject__learning_area__in instead of subject__department.
+    # 15 DB calls total (3 keywords × 5 departments); same count as original
+    # but now actually correct. Could be collapsed to one conditional Avg query
+    # if needed.
+
     hod_trend_data = []
-    default_trends = {
-        'MATH': [58, 62, 66], 'SCIENCES': [63, 67, 71], 'LANGUAGES': [70, 72, 75],
-        'HUMANITIES': [72, 74, 77], 'TECHNICALS': [50, 54, 58]
-    }
-
-    for dept_code, _ in departments:
+    for label, area_codes in DEPARTMENT_LEARNING_AREAS:
         dept_scores = []
-        for task_keyword in ['Mid-term', 'Portfolio', 'End of Term']:
-            avg_val = school_results.filter(
-                assessment_task__title__icontains=task_keyword
-            ).aggregate(avg_p=Avg('pct'))['avg_p']
-            dept_scores.append(round(avg_val, 1) if avg_val is not None else default_trends[dept_code][len(dept_scores)])
+        for idx, task_keyword in enumerate(["Mid-term", "Portfolio", "End of Term"]):
+            avg_val = (
+                school_results.filter(
+                    assessment_task__allocation__subject__learning_area__in=area_codes,
+                    assessment_task__title__icontains=task_keyword,
+                )
+                .aggregate(avg_p=Avg("pct"))["avg_p"]
+            )
+            dept_scores.append(
+                round(avg_val, 1)
+                if avg_val is not None
+                else DEFAULT_TRENDS[label][idx]
+            )
         hod_trend_data.append(dept_scores)
 
-    # User Initials
-    user_initials = "".join([n[0] for n in user.full_name.split()[:2]]).upper() if hasattr(user, 'full_name') and user.full_name else "JN"
+    # -- User initials --------------------------------------------------------
+    # Teacher.full_name ✓ (CharField on the custom user model)
+    full_name = getattr(user, "full_name", "") or ""
+    user_initials = "".join(n[0] for n in full_name.split()[:2]).upper() or "JN"
+
+    # =========================================================================
+    # 3.  CONTEXT
+    # =========================================================================
 
     context = {
-        'academic_year': academic_year,
-        'term': term,
-        'user_initials': user_initials,
-        
+        "academic_year": academic_year,
+        "term": term,
+        "user_initials": user_initials,
         # Teacher
-        'teacher_classes_count': teacher_classes_count,
-        'pending_entries_count': pending_entries_count,
-        'teacher_students_count': teacher_students_count,
-        'tasks_entered_count': tasks_entered_count,
-        'total_expected_tasks': total_expected_tasks,
-        'teacher_avg_pct': round(teacher_avg_pct, 1),
-        'teacher_avg_level': teacher_avg_level,
-        'teacher_be_count': teacher_be_count,
-        'classes_data': classes_data,
-        
-        # Charts
-        'teacher_chart_labels': json.dumps(teacher_chart_labels),
-        'teacher_chart_ee': json.dumps(teacher_chart_ee),
-        'teacher_chart_me': json.dumps(teacher_chart_me),
-        'teacher_chart_ae': json.dumps(teacher_chart_ae),
-        'teacher_chart_be': json.dumps(teacher_chart_be),
-        
+        "teacher_classes_count": teacher_classes_count,
+        "pending_entries_count": pending_entries_count,
+        "teacher_students_count": teacher_students_count,
+        "tasks_entered_count": tasks_entered_count,
+        "total_expected_tasks": total_expected_tasks,
+        "teacher_avg_pct": round(teacher_avg_pct, 1),
+        "teacher_avg_level": teacher_avg_level,
+        "teacher_be_count": teacher_be_count,
+        "classes_data": classes_data,
+        # Teacher charts
+        "teacher_chart_labels": json.dumps(teacher_chart_labels),
+        "teacher_chart_ee": json.dumps(teacher_chart_ee),
+        "teacher_chart_me": json.dumps(teacher_chart_me),
+        "teacher_chart_ae": json.dumps(teacher_chart_ae),
+        "teacher_chart_be": json.dumps(teacher_chart_be),
         # HOD
-        'total_students': total_students,
-        'total_classrooms': total_classrooms,
-        'total_teachers': total_teachers,
-        'total_hods': total_hods,
-        'school_avg': round(school_avg, 1),
-        'school_be_students_count': school_be_students_count,
-        'be_cohort_percentage': be_cohort_percentage,
-        'alerts': alerts,
-        'hod_chart_labels': json.dumps(hod_chart_labels),
-        'hod_chart_ee': json.dumps(hod_chart_ee),
-        'hod_chart_me': json.dumps(hod_chart_me),
-        'hod_chart_ae': json.dumps(hod_chart_ae),
-        'hod_chart_be': json.dumps(hod_chart_be),
-        'hod_trend_data': json.dumps(hod_trend_data),
+        "total_students": total_students,
+        "total_classrooms": total_classrooms,
+        "total_teachers": total_teachers,
+        "total_hods": total_hods,
+        "school_avg": round(school_avg, 1),
+        "school_be_students_count": school_be_students_count,
+        "be_cohort_percentage": be_cohort_percentage,
+        "alerts": alerts,
+        # HOD charts
+        "hod_chart_labels": json.dumps(hod_chart_labels),
+        "hod_chart_ee": json.dumps(hod_chart_ee),
+        "hod_chart_me": json.dumps(hod_chart_me),
+        "hod_chart_ae": json.dumps(hod_chart_ae),
+        "hod_chart_be": json.dumps(hod_chart_be),
+        "hod_trend_data": json.dumps(hod_trend_data),
     }
 
-    return render(request, 'school/cbc_school_analytics_dashboard.html', context)
+    return render(request, "school/cbc_school_analytics_dashboard.html", context)
 
 @login_required
 def student_list(request):

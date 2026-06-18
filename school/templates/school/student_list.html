@@ -2,40 +2,37 @@
 
 {% block content %}
 
-<!-- Page Header -->
-<div class="mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+<div class="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
     <div>
-        <h1 class="text-2xl font-bold text-gray-900">Students</h1>
-        <p class="text-sm text-gray-500 mt-1">
+        <p class="text-xs uppercase tracking-[0.24em] text-slate-500 dark:text-slate-400">Student Directory</p>
+        <h1 class="text-2xl font-semibold text-slate-900 dark:text-white mt-1">Students</h1>
+        <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">
             {{ academic_year }} &middot; Term {{ term }} &middot;
-            <span class="font-medium text-gray-700">{{ student_count }} student{{ student_count|pluralize }}</span>
+            <span class="font-medium text-slate-700 dark:text-slate-300">{{ student_count }} student{{ student_count|pluralize }}</span>
         </p>
     </div>
 </div>
 
-<!-- Search & Filter Bar -->
-<div class="bg-white rounded-xl shadow-sm border border-gray-100 p-4 mb-6">
-    <form method="get" class="flex flex-col sm:flex-row gap-3">
-        <!-- Search input -->
+<div class="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 p-3 mb-4 transition-colors duration-200">
+    <form method="get" class="flex flex-col sm:flex-row gap-2">
         <div class="relative flex-1">
             <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg class="h-4 w-4 text-slate-400 dark:text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                           d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
                 </svg>
             </div>
             <input type="text" name="q" value="{{ query }}"
                    placeholder="Search by name or admission number…"
-                   class="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                   class="w-full pl-9 pr-3 py-2 border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 rounded-xl text-xs text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:border-blue-500 dark:focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100 dark:focus:ring-blue-950/50 transition">
         </div>
 
-        <!-- Stream filter -->
-        <div class="sm:w-56">
+        <div class="sm:w-48">
             <select name="stream"
-                    class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-                <option value="">All Streams</option>
+                    class="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 rounded-xl text-xs text-slate-900 dark:text-slate-100 focus:border-blue-500 dark:focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100 dark:focus:ring-blue-950/50 transition">
+                <option value="" class="dark:bg-slate-950">All Streams</option>
                 {% for stream in streams %}
-                    <option value="{{ stream.id }}" {% if selected_stream == stream.id|stringformat:"s" %}selected{% endif %}>
+                    <option value="{{ stream.id }}" class="dark:bg-slate-950" {% if selected_stream == stream.id or selected_stream == stream.id|slugify or selected_stream == stream.id|stringformat:"s" %}selected{% endif %}>
                         {{ stream }}
                     </option>
                 {% endfor %}
@@ -43,61 +40,57 @@
         </div>
 
         <button type="submit"
-                class="px-5 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors">
+                class="px-4 py-2 bg-blue-600 text-white text-xs font-semibold rounded-xl hover:bg-blue-700 dark:hover:bg-blue-500 transition shadow-sm">
             Filter
         </button>
 
         {% if query or selected_stream %}
         <a href="{% url 'student_list' %}"
-           class="px-4 py-2 text-gray-600 text-sm font-medium border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors text-center no-underline">
+           class="px-4 py-2 text-slate-600 dark:text-slate-400 text-xs font-semibold border border-slate-300 dark:border-slate-700 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800/60 transition text-center no-underline">
             Clear
         </a>
         {% endif %}
     </form>
 </div>
 
-<!-- Student Table -->
 {% if students %}
-<div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+<div class="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden transition-colors duration-200">
     <div class="overflow-x-auto">
-        <table class="min-w-full divide-y divide-gray-100">
-            <thead>
+        <table class="min-w-full divide-y divide-slate-200 dark:divide-slate-800">
+            <thead class="bg-slate-50 dark:bg-slate-950/50 text-slate-500 dark:text-slate-400 uppercase tracking-wider text-[10px]">
                 <tr>
-                    <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">#</th>
-                    <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Student</th>
-                    <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Adm. No.</th>
-                    <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Stream / Class</th>
-                    <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Avg %</th>
-                    <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">CBC Level</th>
-                    <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Results</th>
-                    <th class="px-6 py-3"></th>
+                    <th class="px-4 py-2.5 text-left font-semibold w-12">#</th>
+                    <th class="px-4 py-2.5 text-left font-semibold">Student</th>
+                    <th class="px-4 py-2.5 text-left font-semibold">Adm. No.</th>
+                    <th class="px-4 py-2.5 text-left font-semibold">Stream / Class</th>
+                    <th class="px-4 py-2.5 text-left font-semibold">Avg %</th>
+                    <th class="px-4 py-2.5 text-left font-semibold">CBC Level</th>
+                    <th class="px-4 py-2.5 text-left font-semibold">Results</th>
+                    <th class="px-4 py-2.5"></th>
                 </tr>
             </thead>
-            <tbody class="divide-y divide-gray-50">
-                {% for student in students %}
+            <tbody class="divide-y divide-slate-100 dark:divide-slate-800/70">
+                {# Sliced to show only the first 15 records to eliminate lag #}
+                {% for student in students|slice:":15" %}
                 {% with avg=student.avg_pct|default:0 %}
-                <tr class="hover:bg-blue-50/40 transition-colors cursor-pointer"
+                <tr class="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition cursor-pointer"
                     onclick="window.location='{% url 'student_detail' student.id %}'">
 
-                    <!-- Row number -->
-                    <td class="px-6 py-4 text-sm text-gray-400 font-mono">{{ forloop.counter }}</td>
+                    <td class="px-4 py-2 text-xs text-slate-400 dark:text-slate-500 font-mono">{{ forloop.counter }}</td>
 
-                    <!-- Name + avatar -->
-                    <td class="px-6 py-4">
-                        <div class="flex items-center gap-3">
-                            <div class="w-9 h-9 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600
-                                        flex items-center justify-center text-white text-sm font-bold flex-shrink-0">
+                    <td class="px-4 py-2">
+                        <div class="flex items-center gap-2.5">
+                            <div class="w-7 h-7 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600
+                                        flex items-center justify-center text-white text-xs font-bold flex-shrink-0 shadow-sm">
                                 {{ student.name|first|upper }}
                             </div>
-                            <span class="text-sm font-semibold text-gray-900">{{ student.name }}</span>
+                            <span class="text-xs font-semibold text-slate-900 dark:text-slate-100">{{ student.name }}</span>
                         </div>
                     </td>
 
-                    <!-- Admission number -->
-                    <td class="px-6 py-4 text-sm text-gray-500 font-mono">{{ student.admission_number }}</td>
+                    <td class="px-4 py-2 text-xs text-slate-500 dark:text-slate-400 font-mono">{{ student.admission_number }}</td>
 
-                    <!-- Stream / classroom -->
-                    <td class="px-6 py-4 text-sm text-gray-600">
+                    <td class="px-4 py-2 text-xs text-slate-600 dark:text-slate-300 font-medium">
                         {% with enr=student.enrollments.all %}
                         {% for e in enr %}
                             {% if e.academic_year == academic_year and e.term == term and e.is_active %}
@@ -107,12 +100,11 @@
                         {% endwith %}
                     </td>
 
-                    <!-- Avg percentage -->
-                    <td class="px-6 py-4">
+                    <td class="px-4 py-2">
                         {% if student.result_count %}
                             <div class="flex items-center gap-2">
-                                <div class="flex-1 bg-gray-100 rounded-full h-1.5 w-20 overflow-hidden">
-                                    <div class="h-1.5 rounded-full
+                                <div class="flex-1 bg-slate-100 dark:bg-slate-800 rounded-full h-1 w-16 overflow-hidden">
+                                    <div class="h-1 rounded-full
                                         {% if avg >= 80 %}bg-green-500
                                         {% elif avg >= 60 %}bg-blue-500
                                         {% elif avg >= 40 %}bg-yellow-400
@@ -120,43 +112,39 @@
                                         style="width: {{ avg }}%">
                                     </div>
                                 </div>
-                                <span class="text-sm font-semibold text-gray-800">{{ avg|floatformat:1 }}%</span>
+                                <span class="text-xs font-semibold text-slate-800 dark:text-slate-200">{{ avg|floatformat:1 }}%</span>
                             </div>
                         {% else %}
-                            <span class="text-xs text-gray-400 italic">No results</span>
+                            <span class="text-[11px] text-slate-400 dark:text-slate-500 italic">No results</span>
                         {% endif %}
                     </td>
 
-                    <!-- CBC Level badge -->
-                    <td class="px-6 py-4">
+                    <td class="px-4 py-2">
                         {% if student.result_count %}
                             {% if avg >= 80 %}
-                                <span class="badge badge-success">EE</span>
+                                <span class="inline-flex items-center rounded-md bg-emerald-100 dark:bg-emerald-950/60 px-2 py-0.5 text-[10px] font-bold text-emerald-800 dark:text-emerald-400">EE</span>
                             {% elif avg >= 60 %}
-                                <span class="badge badge-primary">ME</span>
+                                <span class="inline-flex items-center rounded-md bg-blue-100 dark:bg-blue-950/60 px-2 py-0.5 text-[10px] font-bold text-blue-800 dark:text-blue-400">ME</span>
                             {% elif avg >= 40 %}
-                                <span class="badge badge-warning">AE</span>
+                                <span class="inline-flex items-center rounded-md bg-amber-100 dark:bg-amber-950/60 px-2 py-0.5 text-[10px] font-bold text-amber-800 dark:text-amber-400">AE</span>
                             {% else %}
-                                <span class="badge badge-danger">BE</span>
+                                <span class="inline-flex items-center rounded-md bg-rose-100 dark:bg-rose-950/60 px-2 py-0.5 text-[10px] font-bold text-rose-800 dark:text-rose-400">BE</span>
                             {% endif %}
                         {% else %}
-                            <span class="badge badge-gray">—</span>
+                            <span class="inline-flex items-center rounded-md bg-slate-100 dark:bg-slate-800 px-2 py-0.5 text-[10px] font-bold text-slate-500 dark:text-slate-400">—</span>
                         {% endif %}
                     </td>
 
-                    <!-- Result count -->
-                    <td class="px-6 py-4 text-sm text-gray-500">
+                    <td class="px-4 py-2 text-xs text-slate-500 dark:text-slate-400">
                         {{ student.result_count|default:"0" }}
                     </td>
 
-                    <!-- Arrow -->
-                    <td class="px-6 py-4 text-right">
+                    <td class="px-4 py-2 text-right">
                         <a href="{% url 'student_detail' student.id %}"
-                           class="text-blue-600 hover:text-blue-700 no-underline"
+                           class="inline-flex items-center justify-center rounded-lg bg-slate-100 dark:bg-slate-800 p-1.5 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition"
                            onclick="event.stopPropagation()">
-                            <svg class="w-5 h-5 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                      d="M9 5l7 7-7 7"/>
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"/>
                             </svg>
                         </a>
                     </td>
@@ -169,18 +157,17 @@
 </div>
 
 {% else %}
-<!-- Empty state -->
-<div class="bg-white rounded-xl shadow-sm border border-gray-100 p-16 text-center">
-    <div class="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-        <svg class="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+<div class="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 p-12 text-center transition-colors duration-200">
+    <div class="w-12 h-12 bg-slate-50 dark:bg-slate-950 rounded-full flex items-center justify-center mx-auto mb-3 border border-slate-100 dark:border-slate-800">
+        <svg class="w-6 h-6 text-slate-400 dark:text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
                   d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857
                      M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857
                      m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/>
         </svg>
     </div>
-    <h3 class="text-lg font-semibold text-gray-700 mb-1">No students found</h3>
-    <p class="text-sm text-gray-400">
+    <h3 class="text-base font-semibold text-slate-800 dark:text-slate-200 mb-1">No students found</h3>
+    <p class="text-xs text-slate-500 dark:text-slate-400">
         {% if query or selected_stream %}
             Try adjusting your search or filter.
         {% else %}
@@ -189,7 +176,7 @@
     </p>
     {% if query or selected_stream %}
     <a href="{% url 'student_list' %}"
-       class="mt-4 inline-block px-4 py-2 text-sm text-blue-600 border border-blue-200 rounded-lg hover:bg-blue-50 no-underline transition-colors">
+       class="mt-3 inline-block px-4 py-2 text-xs font-semibold text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-900 rounded-xl hover:bg-blue-50 dark:hover:bg-blue-950/40 no-underline transition">
         Clear filters
     </a>
     {% endif %}

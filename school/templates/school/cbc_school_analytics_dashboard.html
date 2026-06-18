@@ -5,31 +5,31 @@
 {% block content %}
 <div class="space-y-8">
   <!-- Main Header -->
-  <section class="bg-white border border-slate-200 rounded-3xl shadow-sm p-6">
+  <section class="bg-white border border-slate-200 rounded-3xl shadow-sm p-6 dark:bg-slate-800 dark:border-slate-700 transition-colors">
     <div class="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
       <div class="space-y-2">
-        <p class="text-sm uppercase tracking-[0.24em] text-slate-500">CBC Performance Dashboard</p>
-        <h1 class="text-2xl md:text-3xl font-semibold text-slate-900">
+        <p class="text-sm uppercase tracking-[0.24em] text-slate-500 dark:text-slate-400">CBC Performance Dashboard</p>
+        <h1 class="text-2xl md:text-3xl font-semibold text-slate-900 dark:text-white">
           School analytics — Term {{ term }}, {{ academic_year }}
         </h1>
       </div>
 
       <div class="flex flex-col sm:flex-row items-start sm:items-center gap-3">
-        <div class="inline-flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
-          <div class="h-10 w-10 rounded-full bg-blue-600 text-white grid place-items-center font-semibold">{{ user_initials }}</div>
+        <div class="inline-flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 dark:border-slate-700 dark:bg-slate-900/50">
+          <div class="h-10 w-10 rounded-full bg-blue-600 text-white grid place-items-center font-semibold shadow-sm">{{ user_initials }}</div>
           <div>
-            <p class="text-sm font-medium text-slate-900">{{ request.user.full_name }}</p>
-            <p class="text-xs text-slate-500">{{ request.user.email|default:"" }}</p>
+            <p class="text-sm font-medium text-slate-900 dark:text-white">{{ request.user.full_name }}</p>
+            <p class="text-xs text-slate-500 dark:text-slate-400">{{ request.user.email|default:"" }}</p>
           </div>
         </div>
 
         {% if request.user.is_hod %}
-        <div class="inline-flex rounded-full border border-slate-200 overflow-hidden bg-slate-50 shadow-sm" role="group">
+        <div class="inline-flex rounded-full border border-slate-200 overflow-hidden bg-slate-100 p-1 dark:border-slate-700 dark:bg-slate-900 shadow-sm" role="group">
           <button id="btn-teacher" type="button" 
-                  class="px-4 py-2 text-sm font-medium text-slate-700 bg-white hover:bg-slate-100 transition" 
+                  class="px-4 py-2 text-sm font-medium text-slate-700 rounded-full transition dark:text-slate-300" 
                   onclick="setRole('teacher')">Teacher View</button>
           <button id="btn-hod" type="button" 
-                  class="px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100 transition" 
+                  class="px-4 py-2 text-sm font-medium text-slate-700 rounded-full transition dark:text-slate-300" 
                   onclick="setRole('hod')">HOD View</button>
         </div>
         {% endif %}
@@ -39,44 +39,44 @@
 
   <!-- ==================== TEACHER VIEW ==================== -->
   <section id="view-teacher" class="space-y-6">
-    <div class="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-      <p class="text-sm text-slate-500">
-        Good morning, <span class="font-semibold text-slate-900">{{ request.user.full_name }}</span>. 
-        You have <span class="font-semibold text-slate-900">{{ teacher_classes_count }}</span> active allocation{{ teacher_classes_count|pluralize }} 
-        and <span class="font-semibold text-slate-900">{{ pending_entries_count }}</span> pending entr{{ pending_entries_count|pluralize:"y,ies" }} this term.
+    <div class="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm dark:bg-slate-800 dark:border-slate-700 transition-colors">
+      <p class="text-sm text-slate-500 dark:text-slate-400">
+        Good morning, <span class="font-semibold text-slate-900 dark:text-white">{{ request.user.full_name }}</span>. 
+        You have <span class="font-semibold text-slate-900 dark:text-white">{{ teacher_classes_count }}</span> active allocation{{ teacher_classes_count|pluralize }} 
+        and <span class="font-semibold text-slate-900 dark:text-white">{{ pending_entries_count }}</span> pending entr{{ pending_entries_count|pluralize:"y,ies" }} this term.
       </p>
     </div>
 
     <!-- Metrics -->
     <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-      <article class="rounded-3xl border border-slate-200 bg-slate-50 p-5">
-        <p class="text-sm text-slate-500">My students</p>
-        <p class="mt-3 text-3xl font-semibold text-slate-900">{{ teacher_students_count }}</p>
-        <p class="mt-2 text-sm text-slate-500">Across {{ teacher_classes_count }} section{{ teacher_classes_count|pluralize }}</p>
+      <article class="rounded-3xl border border-slate-200 bg-slate-50 p-5 dark:border-slate-700 dark:bg-slate-800/40">
+        <p class="text-sm text-slate-500 dark:text-slate-400">My students</p>
+        <p class="mt-3 text-3xl font-semibold text-slate-900 dark:text-white">{{ teacher_students_count }}</p>
+        <p class="mt-2 text-sm text-slate-500 dark:text-slate-400">Across {{ teacher_classes_count }} section{{ teacher_classes_count|pluralize }}</p>
       </article>
-      <article class="rounded-3xl border border-slate-200 bg-slate-50 p-5">
-        <p class="text-sm text-slate-500">Tasks entered</p>
-        <p class="mt-3 text-3xl font-semibold text-slate-900">{{ tasks_entered_count }}</p>
-        <p class="mt-2 text-sm text-slate-500">Of {{ total_expected_tasks }} expected</p>
+      <article class="rounded-3xl border border-slate-200 bg-slate-50 p-5 dark:border-slate-700 dark:bg-slate-800/40">
+        <p class="text-sm text-slate-500 dark:text-slate-400">Tasks entered</p>
+        <p class="mt-3 text-3xl font-semibold text-slate-900 dark:text-white">{{ tasks_entered_count }}</p>
+        <p class="mt-2 text-sm text-slate-500 dark:text-slate-400">Of {{ total_expected_tasks }} expected</p>
       </article>
-      <article class="rounded-3xl border border-slate-200 bg-slate-50 p-5">
-        <p class="text-sm text-slate-500">Class average</p>
-        <p class="mt-3 text-3xl font-semibold text-slate-900">{{ teacher_avg_pct }}%</p>
-        <p class="mt-2 text-sm text-slate-500">{{ teacher_avg_level }}</p>
+      <article class="rounded-3xl border border-slate-200 bg-slate-50 p-5 dark:border-slate-700 dark:bg-slate-800/40">
+        <p class="text-sm text-slate-500 dark:text-slate-400">Class average</p>
+        <p class="mt-3 text-3xl font-semibold text-slate-900 dark:text-white">{{ teacher_avg_pct }}%</p>
+        <p class="mt-2 text-sm text-slate-500 dark:text-slate-400">{{ teacher_avg_level }}</p>
       </article>
-      <article class="rounded-3xl border border-slate-200 bg-slate-50 p-5">
-        <p class="text-sm text-slate-500">Below expectations</p>
-        <p class="mt-3 text-3xl font-semibold text-slate-900">{{ teacher_be_count }}</p>
-        <p class="mt-2 text-sm text-slate-500">Learner{{ teacher_be_count|pluralize }} flagged</p>
+      <article class="rounded-3xl border border-slate-200 bg-slate-50 p-5 dark:border-slate-700 dark:bg-slate-800/40">
+        <p class="text-sm text-slate-500 dark:text-slate-400">Below expectations</p>
+        <p class="mt-3 text-3xl font-semibold text-rose-600 dark:text-rose-400">{{ teacher_be_count }}</p>
+        <p class="mt-2 text-sm text-slate-500 dark:text-slate-400">Learner{{ teacher_be_count|pluralize }} flagged</p>
       </article>
     </div>
 
     <!-- Clickable Classes + Chart -->
     <div class="grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
-      <div class="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+      <div class="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm dark:bg-slate-800 dark:border-slate-700 transition-colors">
         <div class="flex items-center justify-between gap-4 mb-5">
-          <h2 class="text-lg font-semibold text-slate-900">My Classes</h2>
-          <span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium uppercase tracking-[0.2em] text-slate-500">
+          <h2 class="text-lg font-semibold text-slate-900 dark:text-white">My Classes</h2>
+          <span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium uppercase tracking-[0.2em] text-slate-500 dark:bg-slate-700 dark:text-slate-300">
             {{ classes_data|length }} classes
           </span>
         </div>
@@ -85,46 +85,46 @@
           {% for cls in classes_data %}
           <a href="#" 
              onclick="showClassStudents({{ cls.allocation_id }}, '{{ cls.name|escapejs }}', '{{ cls.subject|escapejs }}')"
-             class="block rounded-3xl border border-slate-200 bg-slate-50 p-4 flex items-center justify-between gap-4 hover:border-blue-300 hover:shadow-md transition-all group cursor-pointer">
+             class="block rounded-3xl border border-slate-200 bg-slate-50 p-4 flex items-center justify-between gap-4 hover:border-blue-400 hover:shadow-md dark:border-slate-700 dark:bg-slate-900/30 dark:hover:border-slate-500 transition-all group cursor-pointer">
             <div>
-              <p class="font-medium text-slate-900 group-hover:text-blue-600">{{ cls.name }}</p>
-              <p class="mt-1 text-sm text-slate-500">{{ cls.subject }} · {{ cls.student_count }} student{{ cls.student_count|pluralize }}</p>
+              <p class="font-medium text-slate-900 group-hover:text-blue-600 dark:text-white dark:group-hover:text-blue-400">{{ cls.name }}</p>
+              <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">{{ cls.subject }} · {{ cls.student_count }} student{{ cls.student_count|pluralize }}</p>
             </div>
-            <span class="rounded-full px-3 py-1 text-sm font-semibold 
-              {% if cls.avg_level == 'EE' %}bg-emerald-100 text-emerald-700
-              {% elif cls.avg_level == 'ME' %}bg-sky-100 text-sky-700
-              {% elif cls.avg_level == 'AE' %}bg-amber-100 text-amber-800
-              {% else %}bg-rose-100 text-rose-700{% endif %}">
+            <span class="rounded-full px-3 py-1 text-sm font-semibold shadow-sm
+              {% if cls.avg_level == 'EE' %}bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-400
+              {% elif cls.avg_level == 'ME' %}bg-sky-100 text-sky-700 dark:bg-sky-950/50 dark:text-sky-400
+              {% elif cls.avg_level == 'AE' %}bg-amber-100 text-amber-800 dark:bg-amber-950/50 dark:text-amber-400
+              {% else %}bg-rose-100 text-rose-700 dark:bg-rose-950/50 dark:text-rose-400{% endif %}">
               {{ cls.avg_level }} · {{ cls.avg_pct }}%
             </span>
           </a>
           {% empty %}
-          <p class="text-sm text-slate-500 py-8 text-center">No active subject allocations found for this term.</p>
+          <p class="text-sm text-slate-500 py-8 text-center dark:text-slate-400">No active subject allocations found for this term.</p>
           {% endfor %}
         </div>
       </div>
 
-      <div class="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-        <div class="flex items-center justify-between gap-4 mb-5">
-          <h2 class="text-lg font-semibold text-slate-900">Class performance split</h2>
-          <div class="flex flex-wrap gap-2 text-sm text-slate-500">
+      <div class="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm dark:bg-slate-800 dark:border-slate-700 transition-colors">
+        <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between gap-4 mb-5">
+          <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Class performance split</h2>
+          <div class="flex flex-wrap gap-2 text-sm text-slate-500 dark:text-slate-400">
             <span class="inline-flex items-center gap-2"><span class="h-2.5 w-2.5 rounded-full bg-emerald-600"></span>EE</span>
-            <span class="inline-flex items-center gap-2"><span class="h-2.5 w-2.5 rounded-full bg-sky-600"></span>ME</span>
-            <span class="inline-flex items-center gap-2"><span class="h-2.5 w-2.5 rounded-full bg-amber-600"></span>AE</span>
-            <span class="inline-flex items-center gap-2"><span class="h-2.5 w-2.5 rounded-full bg-rose-600"></span>BE</span>
+            <span class="inline-flex items-center gap-2"><span class="h-2.5 w-2.5 rounded-full bg-blue-500"></span>ME</span>
+            <span class="inline-flex items-center gap-2"><span class="h-2.5 w-2.5 rounded-full bg-amber-500"></span>AE</span>
+            <span class="inline-flex items-center gap-2"><span class="h-2.5 w-2.5 rounded-full bg-rose-500"></span>BE</span>
           </div>
         </div>
-        <div class="h-[360px] rounded-3xl bg-slate-50 p-4">
+        <div class="h-[360px] rounded-3xl bg-slate-50 p-4 dark:bg-slate-900/40">
           <canvas id="teacherChart" role="img" aria-label="Class performance split chart"></canvas>
         </div>
       </div>
     </div>
 
     <!-- Quick Actions -->
-    <div class="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-      <h2 class="text-lg font-semibold text-slate-900 mb-5">Quick Actions</h2>
+    <div class="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm dark:bg-slate-800 dark:border-slate-700 transition-colors">
+      <h2 class="text-lg font-semibold text-slate-900 dark:text-white mb-5">Quick Actions</h2>
       <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <!-- Add your quick action buttons here -->
+        <!-- Action items mapping goes here -->
       </div>
     </div>
   </section>
@@ -132,13 +132,13 @@
   <!-- ==================== HOD VIEW (Comprehensive) ==================== -->
   {% if request.user.is_hod %}
   <section id="view-hod" class="hidden space-y-6">
-    <div class="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+    <div class="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm dark:bg-slate-800 dark:border-slate-700 transition-colors">
       <div class="flex justify-between items-start">
         <div>
-          <p class="text-sm text-slate-500">School-Wide Overview</p>
-          <h2 class="text-2xl font-semibold text-slate-900">Term {{ term }}, {{ academic_year }} • HOD Dashboard</h2>
+          <p class="text-sm text-slate-500 dark:text-slate-400">School-Wide Overview</p>
+          <h2 class="text-2xl font-semibold text-slate-900 dark:text-white mt-1">Term {{ term }}, {{ academic_year }} • HOD Dashboard</h2>
         </div>
-        <span class="inline-flex items-center gap-2 bg-emerald-100 text-emerald-700 text-xs font-medium px-3 py-1.5 rounded-2xl">
+        <span class="inline-flex items-center gap-2 bg-emerald-100 text-emerald-700 text-xs font-medium px-3 py-1.5 rounded-2xl dark:bg-emerald-950/60 dark:text-emerald-400 shadow-sm">
           <span class="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></span> LIVE
         </span>
       </div>
@@ -146,56 +146,56 @@
 
     <!-- Metrics -->
     <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-      <article class="rounded-3xl border border-slate-200 bg-slate-50 p-5">
-        <p class="text-sm text-slate-500">Total Students</p>
-        <p class="mt-3 text-4xl font-semibold text-slate-900">{{ total_students }}</p>
-        <p class="mt-2 text-sm text-slate-500">{{ total_classrooms }} classrooms</p>
+      <article class="rounded-3xl border border-slate-200 bg-slate-50 p-5 dark:border-slate-700 dark:bg-slate-800/40">
+        <p class="text-sm text-slate-500 dark:text-slate-400">Total Students</p>
+        <p class="mt-3 text-4xl font-semibold text-slate-900 dark:text-white">{{ total_students }}</p>
+        <p class="mt-2 text-sm text-slate-500 dark:text-slate-400">{{ total_classrooms }} classrooms</p>
       </article>
-      <article class="rounded-3xl border border-slate-200 bg-slate-50 p-5">
-        <p class="text-sm text-slate-500">Teaching Staff</p>
-        <p class="mt-3 text-4xl font-semibold text-slate-900">{{ total_teachers }}</p>
-        <p class="mt-2 text-sm text-slate-500">{{ total_hods }} HODs</p>
+      <article class="rounded-3xl border border-slate-200 bg-slate-50 p-5 dark:border-slate-700 dark:bg-slate-800/40">
+        <p class="text-sm text-slate-500 dark:text-slate-400">Teaching Staff</p>
+        <p class="mt-3 text-4xl font-semibold text-slate-900 dark:text-white">{{ total_teachers }}</p>
+        <p class="mt-2 text-sm text-slate-500 dark:text-slate-400">{{ total_hods }} HODs</p>
       </article>
-      <article class="rounded-3xl border border-slate-200 bg-slate-50 p-5">
-        <p class="text-sm text-slate-500">School Average</p>
-        <p class="mt-3 text-4xl font-semibold text-slate-900">{{ school_avg }}%</p>
-        <p class="mt-2 text-sm text-slate-500">Overall Performance</p>
+      <article class="rounded-3xl border border-slate-200 bg-slate-50 p-5 dark:border-slate-700 dark:bg-slate-800/40">
+        <p class="text-sm text-slate-500 dark:text-slate-400">School Average</p>
+        <p class="mt-3 text-4xl font-semibold text-slate-900 dark:text-white">{{ school_avg }}%</p>
+        <p class="mt-2 text-sm text-slate-500 dark:text-slate-400">Overall Performance</p>
       </article>
-      <article class="rounded-3xl border border-slate-200 bg-slate-50 p-5">
-        <p class="text-sm text-slate-500">At-Risk Students</p>
-        <p class="mt-3 text-4xl font-semibold text-rose-600">{{ school_be_students_count }}</p>
-        <p class="mt-2 text-sm text-slate-500">{{ be_cohort_percentage }}% of cohort</p>
+      <article class="rounded-3xl border border-slate-200 bg-slate-50 p-5 dark:border-slate-700 dark:bg-slate-800/40">
+        <p class="text-sm text-slate-500 dark:text-slate-400">At-Risk Students</p>
+        <p class="mt-3 text-4xl font-semibold text-rose-600 dark:text-rose-400">{{ school_be_students_count }}</p>
+        <p class="mt-2 text-sm text-slate-500 dark:text-slate-400">{{ be_cohort_percentage }}% of cohort</p>
       </article>
     </div>
 
     <div class="grid gap-6 xl:grid-cols-12">
       <!-- Department Performance -->
-      <div class="xl:col-span-7 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-        <div class="flex items-center justify-between mb-6">
-          <h2 class="text-lg font-semibold text-slate-900">Performance by Department</h2>
-          <div class="flex gap-4 text-sm text-slate-500">
+      <div class="xl:col-span-7 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm dark:bg-slate-800 dark:border-slate-700 transition-colors">
+        <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between mb-6">
+          <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Performance by Department</h2>
+          <div class="flex gap-4 text-sm text-slate-500 dark:text-slate-400">
             <span class="flex items-center gap-1.5"><span class="h-3 w-3 rounded-full bg-emerald-600"></span>EE</span>
-            <span class="flex items-center gap-1.5"><span class="h-3 w-3 rounded-full bg-sky-600"></span>ME</span>
-            <span class="flex items-center gap-1.5"><span class="h-3 w-3 rounded-full bg-amber-600"></span>AE</span>
-            <span class="flex items-center gap-1.5"><span class="h-3 w-3 rounded-full bg-rose-600"></span>BE</span>
+            <span class="flex items-center gap-1.5"><span class="h-3 w-3 rounded-full bg-blue-500"></span>ME</span>
+            <span class="flex items-center gap-1.5"><span class="h-3 w-3 rounded-full bg-amber-500"></span>AE</span>
+            <span class="flex items-center gap-1.5"><span class="h-3 w-3 rounded-full bg-rose-500"></span>BE</span>
           </div>
         </div>
-        <div class="h-96">
+        <div class="h-96 dark:bg-slate-900/20 rounded-2xl p-2">
           <canvas id="hodChart"></canvas>
         </div>
       </div>
 
       <!-- Alerts -->
-      <div class="xl:col-span-5 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-        <h2 class="text-lg font-semibold mb-5">Alerts &amp; Interventions</h2>
-        <div class="space-y-4 max-h-96 overflow-auto">
+      <div class="xl:col-span-5 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm dark:bg-slate-800 dark:border-slate-700 transition-colors">
+        <h2 class="text-lg font-semibold text-slate-900 dark:text-white mb-5">Alerts &amp; Interventions</h2>
+        <div class="space-y-4 max-h-96 overflow-auto pr-1">
           {% for alert in alerts %}
-          <div class="rounded-2xl border-l-4 p-5 {% if alert.type == 'warn' %}border-rose-400 bg-rose-50{% else %}border-sky-400 bg-sky-50{% endif %}">
+          <div class="rounded-2xl border-l-4 p-5 {% if alert.type == 'warn' %}border-rose-400 bg-rose-50 dark:bg-rose-950/20 dark:border-rose-500{% else %}border-sky-400 bg-sky-50 dark:bg-sky-950/20 dark:border-sky-500{% endif %}">
             <div class="flex gap-4">
               <div class="text-2xl">{% if alert.type == 'warn' %}⚠️{% else %}ℹ️{% endif %}</div>
               <div>
-                <p class="font-medium">{{ alert.text }}</p>
-                <p class="text-xs text-slate-500 mt-1">{{ alert.time }}</p>
+                <p class="font-medium text-slate-900 dark:text-slate-200">{{ alert.text }}</p>
+                <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">{{ alert.time }}</p>
               </div>
             </div>
           </div>
@@ -205,12 +205,12 @@
     </div>
 
     <!-- Trend Chart -->
-    <div class="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-      <h2 class="text-lg font-semibold mb-6">School Performance Trend</h2>
-      <div class="h-96">
+    <div class="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm dark:bg-slate-800 dark:border-slate-700 transition-colors">
+      <h2 class="text-lg font-semibold text-slate-900 dark:text-white mb-6">School Performance Trend</h2>
+      <div class="h-96 dark:bg-slate-900/20 rounded-2xl p-2">
         <canvas id="hodTrend"></canvas>
       </div>
-      <div id="hodTrendLegend" class="flex flex-wrap gap-4 mt-4"></div>
+      <div id="hodTrendLegend" class="flex flex-wrap gap-4 mt-4 text-slate-700 dark:text-slate-300"></div>
     </div>
   </section>
   {% endif %}
@@ -221,22 +221,26 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 
 <!-- Class Students Modal -->
-<div id="classModal" class="hidden fixed inset-0 bg-black bg-opacity-60 z-[200] flex items-center justify-center p-4">
-  <div class="bg-white rounded-3xl shadow-2xl max-w-5xl w-full max-h-[92vh] flex flex-col overflow-hidden">
-    <div class="flex justify-between items-center border-b px-6 py-4 bg-slate-50">
+<div id="classModal" class="hidden fixed inset-0 bg-black/60 backdrop-blur-xs z-[200] flex items-center justify-center p-4 transition-all">
+  <div class="bg-white rounded-3xl shadow-2xl max-w-5xl w-full max-h-[92vh] flex flex-col overflow-hidden dark:bg-slate-800 dark:border dark:border-slate-700">
+    <div class="flex justify-between items-center border-b px-6 py-4 bg-slate-50 dark:bg-slate-900/50 dark:border-slate-700">
       <div>
-        <h2 id="modalClassName" class="text-xl font-semibold text-slate-900"></h2>
-        <p id="modalSubject" class="text-slate-500"></p>
+        <h2 id="modalClassName" class="text-xl font-semibold text-slate-900 dark:text-white"></h2>
+        <p id="modalSubject" class="text-slate-500 dark:text-slate-400 text-sm mt-0.5"></p>
       </div>
-      <button onclick="closeModal()" class="text-4xl leading-none text-slate-400 hover:text-slate-600">&times;</button>
+      <button onclick="closeModal()" class="text-4xl leading-none text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300 transition">&times;</button>
     </div>
-    <div class="p-6 overflow-auto flex-1" id="modalContent"></div>
+    <div class="p-6 overflow-auto flex-1 text-slate-700 dark:text-slate-300" id="modalContent"></div>
   </div>
 </div>
 
 <script>
-// ====================== CHARTS INITIALIZATION ======================
+// Detect theme setup helper configuration
+const isDarkMode = document.documentElement.classList.contains('dark');
+const chartGridColor = isDarkMode ? '#334155' : '#e2e8f0';
+const chartTicksColor = isDarkMode ? '#94a3b8' : '#64748b';
 
+// ====================== CHARTS INITIALIZATION ======================
 const cbcColors = {
   ee: '#10b981',
   me: '#3b82f6',
@@ -262,8 +266,8 @@ if (document.getElementById('teacherChart')) {
       maintainAspectRatio: false,
       plugins: { legend: { display: false } },
       scales: {
-        x: { stacked: true, grid: { display: false } },
-        y: { stacked: true, max: 100, ticks: { callback: v => v + '%' } }
+        x: { stacked: true, grid: { display: false }, ticks: { color: chartTicksColor } },
+        y: { stacked: true, max: 100, ticks: { callback: v => v + '%', color: chartTicksColor }, grid: { color: chartGridColor } }
       }
     }
   });
@@ -287,8 +291,8 @@ if (document.getElementById('hodChart')) {
       maintainAspectRatio: false,
       plugins: { legend: { display: false } },
       scales: {
-        x: { stacked: true, grid: { display: false } },
-        y: { stacked: true, max: 100, ticks: { callback: v => v + '%' } }
+        x: { stacked: true, grid: { display: false }, ticks: { color: chartTicksColor } },
+        y: { stacked: true, max: 100, ticks: { callback: v => v + '%', color: chartTicksColor }, grid: { color: chartGridColor } }
       }
     }
   });
@@ -305,7 +309,7 @@ if (document.getElementById('hodTrend')) {
   if (legendEl) {
     trendSubjects.forEach((subject, i) => {
       const span = document.createElement('span');
-      span.className = 'inline-flex items-center gap-2 text-sm';
+      span.className = 'inline-flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300';
       span.innerHTML = `<span class="h-3 w-3 rounded-full" style="background:${trendColors[i]}"></span>${subject}`;
       legendEl.appendChild(span);
     });
@@ -330,8 +334,8 @@ if (document.getElementById('hodTrend')) {
       maintainAspectRatio: false,
       plugins: { legend: { display: false } },
       scales: {
-        y: { min: 30, max: 90, ticks: { callback: v => v + '%' } },
-        x: { grid: { display: false } }
+        y: { min: 30, max: 90, ticks: { callback: v => v + '%', color: chartTicksColor }, grid: { color: chartGridColor } },
+        x: { grid: { display: false }, ticks: { color: chartTicksColor } }
       }
     }
   });
@@ -346,14 +350,14 @@ async function showClassStudents(allocationId, className, subject) {
   document.getElementById('modalSubject').textContent = subject + " — Performance Overview";
   
   modal.classList.remove('hidden');
-  content.innerHTML = `<div class="flex justify-center py-20"><div class="animate-spin h-10 w-10 border-4 border-blue-600 border-t-transparent rounded-full"></div></div>`;
+  content.innerHTML = `<div class="flex justify-center py-20"><div class="animate-spin h-10 w-10 border-4 border-blue-600 border-t-transparent rounded-full dark:border-blue-400"></div></div>`;
 
   try {
     const response = await fetch(`/school/class-students/${allocationId}/`);
     if (!response.ok) throw new Error();
     content.innerHTML = await response.text();
   } catch (e) {
-    content.innerHTML = `<div class="text-center py-12 text-red-600">Unable to load student data at the moment.</div>`;
+    content.innerHTML = `<div class="text-center py-12 text-red-600 dark:text-red-400">Unable to load student data at the moment.</div>`;
   }
 }
 
@@ -376,10 +380,16 @@ function setRole(role) {
   if (btnTeacher) {
     btnTeacher.classList.toggle('bg-white', role === 'teacher');
     btnTeacher.classList.toggle('text-slate-900', role === 'teacher');
+    btnTeacher.classList.toggle('dark:bg-slate-700', role === 'teacher');
+    btnTeacher.classList.toggle('dark:text-white', role === 'teacher');
+    btnTeacher.classList.toggle('shadow-xs', role === 'teacher');
   }
   if (btnHod) {
     btnHod.classList.toggle('bg-white', role === 'hod');
     btnHod.classList.toggle('text-slate-900', role === 'hod');
+    btnHod.classList.toggle('dark:bg-slate-700', role === 'hod');
+    btnHod.classList.toggle('dark:text-white', role === 'hod');
+    btnHod.classList.toggle('shadow-xs', role === 'hod');
   }
 }
 
